@@ -1,0 +1,634 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+
+// ═══════════════════════════════════════════════════════════════
+// DESIGN TOKENS — Chromatic Lattice
+// ═══════════════════════════════════════════════════════════════
+
+const T = {
+  bg0: "#08080c", bg1: "#0e0e14", bg2: "#141420", bg3: "#1a1a28", bg4: "#222232",
+  border0: "#1e1e2e", border1: "#2a2a3c", border2: "#36364a",
+  text0: "#eae9f0", text1: "#c4c3ce", text2: "#8a899a", text3: "#5a596a",
+  blue: "#4a8fe7", blueDim: "rgba(74,143,231,0.15)", blueMid: "rgba(74,143,231,0.35)",
+  red: "#e84a5a", redDim: "rgba(232,74,90,0.15)", redMid: "rgba(232,74,90,0.35)",
+  purple: "#9b6dff", purpleDim: "rgba(155,109,255,0.15)", purpleMid: "rgba(155,109,255,0.35)",
+  green: "#3dbe78", greenDim: "rgba(61,190,120,0.15)", greenMid: "rgba(61,190,120,0.35)",
+  yellow: "#e0c040", yellowDim: "rgba(224,192,64,0.12)", yellowMid: "rgba(224,192,64,0.30)",
+  orange: "#e8762b", orangeDim: "rgba(232,118,43,0.15)", orangeMid: "rgba(232,118,43,0.35)",
+  teal: "#2bbfa0", tealDim: "rgba(43,191,160,0.15)", tealMid: "rgba(43,191,160,0.35)",
+  silver: "#b0b3c0", silverDim: "rgba(176,179,192,0.10)", silverMid: "rgba(176,179,192,0.28)",
+  crimson: "#dc2640", crimsonDim: "rgba(220,38,64,0.15)", crimsonMid: "rgba(220,38,64,0.35)",
+  rSm: 3, rMd: 5, rLg: 8, rPill: 100,
+  mono: "ui-monospace, 'SF Mono', monospace",
+  display: "Georgia, serif",
+  body: "system-ui, sans-serif",
+};
+
+const LEVEL_COLOR = {
+  verified: { base: T.green, dim: T.greenDim, mid: T.greenMid, label: "VER" },
+  asserted: { base: T.orange, dim: T.orangeDim, mid: T.orangeMid, label: "ASR" },
+  assumed: { base: T.yellow, dim: T.yellowDim, mid: T.yellowMid, label: "ASM" },
+  inferred: { base: T.blue, dim: T.blueDim, mid: T.blueMid, label: "INF" },
+  extrapolated: { base: T.crimson, dim: T.crimsonDim, mid: T.crimsonMid, label: "EXT" },
+  aspirational: { base: T.silver, dim: T.silverDim, mid: T.silverMid, label: "ASP" },
+  invariant: { base: T.purple, dim: T.purpleDim, mid: T.purpleMid, label: "INV" },
+  used: { base: T.teal, dim: T.tealDim, mid: T.tealMid, label: "USE" },
+};
+const lc = l => LEVEL_COLOR[l] || LEVEL_COLOR.used;
+
+const TECH_COLOR = { ewma: T.teal, gbdt: T.orange, logit: T.blue, hmm: T.purple, naive: T.silver, ensemble: T.green };
+
+const NOW = Date.now();
+const DAY = 864e5, HOUR = 36e5, MIN = 6e4;
+function ago(ms) {
+  if (ms < MIN) return `${Math.floor(ms/1000)}s`;
+  if (ms < HOUR) return `${Math.floor(ms/MIN)}m`;
+  if (ms < DAY) return `${(ms/HOUR).toFixed(1)}h`;
+  return `${(ms/DAY).toFixed(1)}d`;
+}
+function decayFactor(age, halfLife) { return Math.pow(0.5, age / halfLife); }
+
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+
+const HYPOTHESES = [
+  { id:"H001", name:"Momentum continuation", level:"verified", confidence:0.42,
+    witnesses:[
+      { id:"w001a",type:"backtest",regime:"StrongBear",result:-0.12,supports:false,ts:NOW-2*DAY,technique:"ewma" },
+      { id:"w001b",type:"backtest",regime:"MildBull",result:0.34,supports:true,ts:NOW-18*DAY,technique:"gbdt" },
+      { id:"w001c",type:"live",regime:"StrongBear",result:-0.08,supports:false,ts:NOW-4*HOUR,technique:"logit" },
+    ]},
+  { id:"H002", name:"Mean reversion short-term", level:"verified", confidence:0.35,
+    witnesses:[
+      { id:"w002a",type:"backtest",regime:"StrongBear",result:-0.28,supports:false,ts:NOW-3*DAY,technique:"gbdt" },
+      { id:"w002b",type:"paper",regime:"all",result:0.15,supports:true,ts:NOW-90*DAY,technique:"naive" },
+    ]},
+  { id:"H004", name:"Trend filter improves quality", level:"verified", confidence:0.78,
+    witnesses:[
+      { id:"w004a",type:"backtest",regime:"StrongBear",result:0.62,supports:true,ts:NOW-1*DAY,technique:"gbdt" },
+      { id:"w004b",type:"live",regime:"StrongBear",result:0.58,supports:true,ts:NOW-6*HOUR,technique:"ensemble" },
+      { id:"w004c",type:"ablation",regime:"StrongBear",result:0.41,supports:true,ts:NOW-12*HOUR,technique:"gbdt" },
+      { id:"w004d",type:"backtest",regime:"MildBear",result:0.55,supports:true,ts:NOW-45*DAY,technique:"logit" },
+    ]},
+  { id:"H006", name:"Short-selling in bear markets", level:"verified", confidence:0.92,
+    witnesses:[
+      { id:"w006a",type:"backtest",regime:"StrongBear",result:1.96,supports:true,ts:NOW-1*DAY,technique:"gbdt" },
+      { id:"w006b",type:"live",regime:"StrongBear",result:1.82,supports:true,ts:NOW-2*HOUR,technique:"ensemble" },
+      { id:"w006c",type:"live",regime:"StrongBear",result:1.91,supports:true,ts:NOW-30*MIN,technique:"gbdt" },
+    ]},
+  { id:"H005", name:"Volatility regime switching", level:"verified", confidence:0.58,
+    witnesses:[
+      { id:"w005a",type:"backtest",regime:"StrongBear",result:0.21,supports:false,ts:NOW-5*DAY,technique:"hmm" },
+      { id:"w005b",type:"backtest",regime:"MildBull",result:0.45,supports:true,ts:NOW-20*DAY,technique:"hmm" },
+    ]},
+  { id:"H007", name:"Confluence improves win rate", level:"asserted", confidence:0.65,
+    witnesses:[
+      { id:"w007a",type:"backtest",regime:"StrongBear",result:0.38,supports:false,ts:NOW-7*DAY,technique:"ensemble" },
+    ]},
+  { id:"H008", name:"Volatility breakouts", level:"verified", confidence:0.71,
+    witnesses:[
+      { id:"w008a",type:"backtest",regime:"StrongBear",result:0.45,supports:true,ts:NOW-3*DAY,technique:"ewma" },
+      { id:"w008b",type:"live",regime:"StrongBear",result:0.39,supports:true,ts:NOW-8*HOUR,technique:"gbdt" },
+    ]},
+  { id:"H003", name:"RSI divergence", level:"asserted", confidence:0.55,
+    witnesses:[{ id:"w003a",type:"backtest",regime:"StrongBear",result:0.15,supports:false,ts:NOW-10*DAY,technique:"logit" }]},
+  { id:"H009", name:"Bull market momentum", level:"assumed", confidence:0.50, witnesses:[] },
+  { id:"H010", name:"Cross-asset correlation", level:"aspirational", confidence:0.30, witnesses:[] },
+];
+
+const TECHNIQUES = [
+  { id:"ewma", name:"EWMA Baseline", family:"baseline", scores:[{d:"02-06",ll:0.648,br:0.212,ec:0.045},{d:"02-07",ll:0.641,br:0.208,ec:0.042},{d:"02-08",ll:0.652,br:0.215,ec:0.048},{d:"02-09",ll:0.639,br:0.206,ec:0.040},{d:"02-10",ll:0.645,br:0.210,ec:0.044},{d:"02-11",ll:0.637,br:0.205,ec:0.039},{d:"02-12",ll:0.643,br:0.209,ec:0.043}]},
+  { id:"gbdt", name:"Gradient Boosted Trees", family:"ml", scores:[{d:"02-06",ll:0.618,br:0.198,ec:0.032},{d:"02-07",ll:0.609,br:0.194,ec:0.029},{d:"02-08",ll:0.615,br:0.197,ec:0.031},{d:"02-09",ll:0.603,br:0.191,ec:0.028},{d:"02-10",ll:0.607,br:0.193,ec:0.030},{d:"02-11",ll:0.601,br:0.189,ec:0.027},{d:"02-12",ll:0.605,br:0.192,ec:0.029}]},
+  { id:"logit", name:"Regime-Gated Logistic", family:"ml", scores:[{d:"02-06",ll:0.625,br:0.202,ec:0.036},{d:"02-07",ll:0.619,br:0.199,ec:0.034},{d:"02-08",ll:0.628,br:0.204,ec:0.038},{d:"02-09",ll:0.616,br:0.197,ec:0.033},{d:"02-10",ll:0.621,br:0.200,ec:0.035},{d:"02-11",ll:0.614,br:0.196,ec:0.032},{d:"02-12",ll:0.618,br:0.198,ec:0.034}]},
+  { id:"hmm", name:"HMM Regime Detector", family:"regime", scores:[{d:"02-06",ll:0.635,br:0.207,ec:0.041},{d:"02-07",ll:0.628,br:0.203,ec:0.038},{d:"02-08",ll:0.640,br:0.210,ec:0.043},{d:"02-09",ll:0.622,br:0.200,ec:0.036},{d:"02-10",ll:0.630,br:0.205,ec:0.039},{d:"02-11",ll:0.620,br:0.199,ec:0.035},{d:"02-12",ll:0.626,br:0.202,ec:0.037}]},
+  { id:"naive", name:"Seasonal Naive", family:"baseline", scores:[{d:"02-06",ll:0.672,br:0.225,ec:0.058},{d:"02-07",ll:0.668,br:0.222,ec:0.055},{d:"02-08",ll:0.675,br:0.228,ec:0.060},{d:"02-09",ll:0.665,br:0.220,ec:0.053},{d:"02-10",ll:0.670,br:0.224,ec:0.057},{d:"02-11",ll:0.663,br:0.218,ec:0.052},{d:"02-12",ll:0.669,br:0.223,ec:0.056}]},
+  { id:"ensemble", name:"Late-Fusion Ensemble", family:"ensemble", scores:[{d:"02-06",ll:0.608,br:0.193,ec:0.026},{d:"02-07",ll:0.601,br:0.189,ec:0.024},{d:"02-08",ll:0.610,br:0.195,ec:0.028},{d:"02-09",ll:0.598,br:0.187,ec:0.023},{d:"02-10",ll:0.604,br:0.191,ec:0.025},{d:"02-11",ll:0.596,br:0.186,ec:0.022},{d:"02-12",ll:0.600,br:0.189,ec:0.024}]},
+];
+
+const CATALYSTS = [
+  { id:"cluster/condense",name:"Cluster Condensation",firings:14,lastFired:NOW-12*MIN,energyDelta:-0.032,cost:0.8,pattern:"k≥3 neighbors within d<0.2",contract:"nonincreasing" },
+  { id:"summary/compress",name:"Summarization",firings:6,lastFired:NOW-45*MIN,energyDelta:-0.018,cost:1.2,pattern:"stable cluster, low velocity",contract:"nonincreasing" },
+  { id:"contra/fork",name:"Contradiction Fork",firings:3,lastFired:NOW-2*HOUR,energyDelta:+0.005,cost:2.1,pattern:"supports∩refutes tension > τ",contract:"credit-bounded" },
+  { id:"decay/archive",name:"Decay & Archival",firings:22,lastFired:NOW-5*MIN,energyDelta:-0.045,cost:0.3,pattern:"low activation, age > T",contract:"nonincreasing" },
+  { id:"ricci/scale",name:"Ricci-Scale Adaptation",firings:48,lastFired:NOW-1*MIN,energyDelta:-0.012,cost:0.5,pattern:"d̂ᵢ deviates from d*(aᵢ)",contract:"nonincreasing" },
+  { id:"regime/gate",name:"Regime Gate Update",firings:7,lastFired:NOW-30*MIN,energyDelta:-0.008,cost:1.0,pattern:"HMM state transition detected",contract:"nonincreasing" },
+];
+
+const STREAMS = [
+  { id:"market",name:"SPY OHLCV",freshness:NOW-4*MIN,gapRate:0.0,quality:0.99,keyed:false },
+  { id:"gdelt",name:"GDELT Events/Tone",freshness:NOW-12*MIN,gapRate:0.0,quality:0.96,keyed:false },
+  { id:"fred",name:"FRED Macro/Rates",freshness:NOW-18*HOUR,gapRate:0.0,quality:0.94,keyed:true },
+  { id:"eia",name:"EIA Energy",freshness:NOW-2*DAY,gapRate:0.02,quality:0.91,keyed:true },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function Chip({ level, children, style: sx }) {
+  const c = level ? lc(level) : null;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: "0.35em",
+      fontFamily: T.mono, fontSize: "0.68rem", fontWeight: 500,
+      padding: "0.25em 0.65em", borderRadius: T.rSm,
+      border: `1px solid ${c ? `${c.base}44` : T.border1}`,
+      background: c ? c.dim : T.bg2, color: c ? c.base : T.text1,
+      whiteSpace: "nowrap", ...sx,
+    }}>
+      {c && <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.base, boxShadow: `0 0 6px ${c.base}`, flexShrink: 0 }} />}
+      {children || (level ? c.label : "")}
+    </span>
+  );
+}
+
+function Badge({ children, color = T.crimson }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      minWidth: 20, height: 20, fontFamily: T.mono, fontSize: "0.6rem",
+      fontWeight: 600, padding: "0 5px", borderRadius: T.rPill,
+      background: color, color: color === T.yellow || color === T.teal || color === T.green ? "#0a1a10" : "#fff",
+    }}>{children}</span>
+  );
+}
+
+function StatusDot({ color, pulse, size = 8 }) {
+  return (
+    <span style={{
+      width: size, height: size, borderRadius: "50%", background: color,
+      display: "inline-block", position: "relative", flexShrink: 0,
+    }}>
+      {pulse && (
+        <span style={{
+          position: "absolute", inset: -3, borderRadius: "50%",
+          border: `1px solid ${color}`,
+          animation: "statusPulse 2s ease-in-out infinite",
+        }} />
+      )}
+    </span>
+  );
+}
+
+function ProgressBar({ value, color, thick }) {
+  return (
+    <div style={{ width: "100%", height: thick ? 10 : 6, background: T.bg3, borderRadius: T.rPill, overflow: "hidden" }}>
+      <div style={{
+        height: "100%", width: `${Math.min(100, value * 100)}%`,
+        background: color, borderRadius: T.rPill,
+        transition: "width 0.6s cubic-bezier(0.22,1,0.36,1)",
+      }} />
+    </div>
+  );
+}
+
+function MetricCard({ label, value, unit, delta, deltaDir, color }) {
+  return (
+    <div style={{
+      background: T.bg1, border: `1px solid ${T.border0}`,
+      borderRadius: T.rMd, padding: 16,
+    }}>
+      <div style={{ fontFamily: T.mono, fontSize: "0.6rem", textTransform: "uppercase", letterSpacing: "0.14em", color: T.text3, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: T.display, fontWeight: 700, fontSize: "1.6rem", color: color || T.text0, lineHeight: 1 }}>
+        {value}{unit && <span style={{ fontSize: "0.8rem", fontWeight: 400 }}>{unit}</span>}
+      </div>
+      {delta && (
+        <div style={{ fontFamily: T.mono, fontSize: "0.65rem", marginTop: 6, color: deltaDir === "up" ? T.green : deltaDir === "down" ? T.crimson : T.text3 }}>
+          {delta}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, count, color, children }) {
+  return (
+    <div style={{
+      background: T.bg1, border: `1px solid ${T.border0}`,
+      borderRadius: T.rMd, overflow: "hidden",
+    }}>
+      {color && <div style={{ height: 3, width: "100%", background: color }} />}
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, paddingBottom: 10, borderBottom: `1px solid ${T.border0}` }}>
+          <span style={{ fontFamily: T.display, fontWeight: 700, fontSize: "0.95rem", color: T.text0 }}>{title}</span>
+          {count !== undefined && <Badge color={color || T.teal}>{count}</Badge>}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SparkBars({ data, color, height = 24 }) {
+  const max = Math.max(...data);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height }}>
+      {data.map((v, i) => (
+        <div key={i} style={{
+          width: 3, borderRadius: "1px 1px 0 0",
+          height: `${(v / max) * 100}%`,
+          background: color, opacity: 0.4 + (v / max) * 0.6,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function TechChart({ techniques, metric, width = 380, height = 140 }) {
+  const key = metric === "logLoss" ? "ll" : metric === "brier" ? "br" : "ec";
+  const allVals = techniques.flatMap(t => t.scores.map(s => s[key]));
+  const min = Math.min(...allVals) * 0.98;
+  const max = Math.max(...allVals) * 1.02;
+  const dates = techniques[0].scores.map(s => s.d);
+  const xS = i => 36 + (i / (dates.length - 1)) * (width - 56);
+  const yS = v => height - 24 - ((v - min) / (max - min)) * (height - 44);
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height }}>
+      {[0, 0.5, 1].map(f => {
+        const y = height - 24 - f * (height - 44);
+        return <g key={f}>
+          <line x1={36} y1={y} x2={width - 20} y2={y} stroke={T.border0} strokeWidth={0.5} />
+          <text x={32} y={y + 3} textAnchor="end" fill={T.text3} fontSize={7} fontFamily={T.mono}>{(min + f * (max - min)).toFixed(3)}</text>
+        </g>;
+      })}
+      {dates.map((d, i) => <text key={d} x={xS(i)} y={height - 6} textAnchor="middle" fill={T.text3} fontSize={7} fontFamily={T.mono}>{d}</text>)}
+      {techniques.map(t => {
+        const color = TECH_COLOR[t.id] || T.text2;
+        const pts = t.scores.map((s, i) => `${xS(i)},${yS(s[key])}`);
+        return <g key={t.id}>
+          <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+          {t.scores.map((s, i) => <circle key={i} cx={xS(i)} cy={yS(s[key])} r={2.2} fill={color} opacity={0.75} />)}
+        </g>;
+      })}
+      <text x={width / 2} y={12} textAnchor="middle" fill={T.text2} fontSize={9} fontFamily={T.mono} fontWeight={500}>
+        {metric === "logLoss" ? "Log Loss ↓" : metric === "brier" ? "Brier Score ↓" : "ECE ↓"}
+      </text>
+    </svg>
+  );
+}
+
+function Segmented({ options, active, onChange }) {
+  return (
+    <div style={{ display: "inline-flex", background: T.bg2, border: `1px solid ${T.border0}`, borderRadius: T.rMd, padding: 2, gap: 2 }}>
+      {options.map(o => (
+        <button key={o.key} onClick={() => onChange(o.key)} style={{
+          fontFamily: T.mono, fontSize: "0.68rem", padding: "0.3em 0.7em",
+          borderRadius: T.rSm, border: "none", cursor: "pointer",
+          background: active === o.key ? T.bg4 : "transparent",
+          color: active === o.key ? T.text0 : T.text3,
+        }}>{o.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function WitnessRow({ w, now }) {
+  const age = now - w.ts;
+  const decay = decayFactor(age, 7 * DAY);
+  const freshColor = decay > 0.7 ? T.green : decay > 0.3 ? T.yellow : decay > 0.1 ? T.crimson : T.text3;
+  const techColor = TECH_COLOR[w.technique] || T.text2;
+  return (
+    <tr style={{ opacity: Math.max(0.35, decay) }}>
+      <td style={tdS}>
+        <Chip style={{
+          background: w.type === "live" ? T.greenDim : w.type === "backtest" ? T.blueDim : w.type === "ablation" ? T.purpleDim : T.silverDim,
+          border: `1px solid ${w.type === "live" ? T.green+"44" : w.type === "backtest" ? T.blue+"44" : w.type === "ablation" ? T.purple+"44" : T.silver+"33"}`,
+          color: w.type === "live" ? T.green : w.type === "backtest" ? T.blue : w.type === "ablation" ? T.purple : T.silver,
+        }}>{w.type}</Chip>
+      </td>
+      <td style={{ ...tdS, color: T.text2 }}>{w.regime}</td>
+      <td style={tdS}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: techColor }} />
+          <span style={{ color: techColor }}>{w.technique}</span>
+        </span>
+      </td>
+      <td style={{ ...tdS, fontWeight: 600, color: w.supports ? T.green : T.crimson }}>
+        {w.result > 0 ? "+" : ""}{w.result.toFixed(2)}
+      </td>
+      <td style={{ ...tdS, color: freshColor }}>{ago(age)}</td>
+      <td style={tdS}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <ProgressBar value={decay} color={freshColor} />
+          <span style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3, minWidth: 24 }}>{Math.round(decay * 100)}%</span>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+const thS = { fontFamily: T.mono, fontSize: "0.58rem", textTransform: "uppercase", letterSpacing: "0.12em", color: T.text3, padding: "8px 10px", textAlign: "left", fontWeight: 500, borderBottom: `1px solid ${T.border0}` };
+const tdS = { padding: "6px 10px", borderBottom: `1px solid ${T.border0}`, fontFamily: T.mono, fontSize: "0.72rem", color: T.text1 };
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APPLICATION
+// ═══════════════════════════════════════════════════════════════
+
+export default function LedgerLattice() {
+  const [now, setNow] = useState(Date.now());
+  const [metric, setMetric] = useState("logLoss");
+  const [expandedH, setExpandedH] = useState(new Set(["H006", "H004"]));
+  const [sortBy, setSortBy] = useState("confidence");
+
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const toggleH = useCallback(id => setExpandedH(p => { const n = new Set(p); n.has(id)?n.delete(id):n.add(id); return n; }), []);
+
+  const sorted = useMemo(() => {
+    const h = [...HYPOTHESES];
+    if (sortBy === "confidence") h.sort((a,b) => b.confidence - a.confidence);
+    else if (sortBy === "freshness") h.sort((a,b) => {
+      const fa = a.witnesses.length ? Math.max(...a.witnesses.map(w=>w.ts)) : 0;
+      const fb = b.witnesses.length ? Math.max(...b.witnesses.map(w=>w.ts)) : 0;
+      return fb - fa;
+    });
+    else h.sort((a,b) => b.witnesses.length - a.witnesses.length);
+    return h;
+  }, [sortBy]);
+
+  const totalW = HYPOTHESES.reduce((a,h) => a + h.witnesses.length, 0);
+  const freshW = HYPOTHESES.reduce((a,h) => a + h.witnesses.filter(w => decayFactor(now-w.ts,7*DAY) > 0.5).length, 0);
+  const catEnergy = CATALYSTS.reduce((a,c) => a + c.energyDelta, 0);
+  const bestT = TECHNIQUES.reduce((b,t) => {
+    const latest = t.scores.at(-1);
+    return (!b || latest.ll < b.score) ? { id: t.id, name: t.name, score: latest.ll } : b;
+  }, null);
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg0, color: T.text1, fontFamily: T.body, fontSize: 13, lineHeight: 1.5 }}>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: ${T.border1}; border-radius: 2px; }
+        @keyframes statusPulse {
+          0%, 100% { opacity: 0; transform: scale(0.8); }
+          50% { opacity: 0.6; transform: scale(1.6); }
+        }
+      `}</style>
+
+      <div style={{ padding: "24px 32px 48px", maxWidth: 1100, margin: "0 auto" }}>
+
+        {/* HEADER */}
+        <header style={{ marginBottom: 32 }}>
+          <div style={{ fontFamily: T.display, fontWeight: 700, fontSize: "1.8rem", color: T.text0, lineHeight: 1.1, marginBottom: 4 }}>
+            Witness Ledger
+          </div>
+          <div style={{ fontFamily: T.mono, fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.16em", color: T.text3, marginBottom: 16 }}>
+            Chromatic Lattice — Forecast Observatory v0.1
+          </div>
+          <div style={{ display: "flex", gap: "0.4em", alignItems: "center", flexWrap: "wrap" }}>
+            <Chip level="verified">{totalW} witnesses</Chip>
+            <Chip level="used">{freshW} fresh</Chip>
+            <Chip level="invariant">ΔE {catEnergy.toFixed(3)}</Chip>
+            <Chip level="asserted">best: {bestT?.name}</Chip>
+            <span style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginLeft: "auto" }}>
+              {new Date(now).toLocaleString()}
+            </span>
+          </div>
+        </header>
+
+        {/* METRIC CARDS */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
+          <MetricCard label="Total Witnesses" value={totalW} delta={`${freshW} within half-life`} deltaDir="up" color={T.green} />
+          <MetricCard label="Catalyst Firings" value={CATALYSTS.reduce((a,c)=>a+c.firings,0)} delta={`ΔE ${catEnergy.toFixed(3)}`} deltaDir={catEnergy < 0 ? "up" : "down"} color={T.purple} />
+          <MetricCard label="Best Log Loss" value={bestT?.score.toFixed(3)} delta={bestT?.id} deltaDir="flat" color={T.orange} />
+          <MetricCard label="Streams Online" value={STREAMS.length} unit={`/${STREAMS.length}`} delta="all reporting" deltaDir="up" color={T.teal} />
+        </div>
+
+        {/* MAIN GRID */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 12, alignItems: "start" }}>
+
+          {/* HYPOTHESIS LEDGER */}
+          <Section title="Hypothesis Witness Ledger" count={sorted.length} color={T.teal}>
+            <div style={{ marginBottom: 12 }}>
+              <Segmented
+                options={[{ key: "confidence", label: "Confidence" }, { key: "freshness", label: "Freshness" }, { key: "witnesses", label: "Count" }]}
+                active={sortBy} onChange={setSortBy}
+              />
+            </div>
+
+            {sorted.map(h => {
+              const isOpen = expandedH.has(h.id);
+              const c = lc(h.level);
+              const newest = h.witnesses.length ? Math.max(...h.witnesses.map(w=>w.ts)) : null;
+              const freshness = newest ? now - newest : null;
+              const freshColor = freshness !== null ? (decayFactor(freshness, 7*DAY) > 0.5 ? T.green : T.yellow) : T.text3;
+
+              return (
+                <div key={h.id} style={{
+                  borderRadius: T.rMd, border: `1px solid ${T.border0}`,
+                  marginBottom: 6, overflow: "hidden",
+                  background: isOpen ? T.bg2 : T.bg1,
+                }}>
+                  <div onClick={() => toggleH(h.id)} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
+                    cursor: "pointer",
+                  }}>
+                    <StatusDot color={c.base} pulse={h.witnesses.some(w => now - w.ts < HOUR)} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontFamily: T.mono, fontSize: "0.68rem", fontWeight: 600, color: T.text0 }}>{h.id}</span>
+                        <Chip level={h.level} />
+                        <span style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text2 }}>{Math.round(h.confidence*100)}%</span>
+                      </div>
+                      <div style={{ fontFamily: T.body, fontSize: "0.78rem", color: T.text1 }}>{h.name}</div>
+                    </div>
+
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <Badge color={c.base}>{h.witnesses.length}</Badge>
+                      {freshness !== null && (
+                        <div style={{ fontFamily: T.mono, fontSize: "0.58rem", color: freshColor, marginTop: 2 }}>
+                          {ago(freshness)} ago
+                        </div>
+                      )}
+                    </div>
+
+                    {h.witnesses.length > 0 && (
+                      <SparkBars
+                        data={[...h.witnesses].sort((a,b)=>a.ts-b.ts).map(w => Math.max(5, decayFactor(now-w.ts, 7*DAY) * 100))}
+                        color={c.base} height={20}
+                      />
+                    )}
+
+                    <span style={{
+                      fontFamily: T.mono, fontSize: "0.6rem", color: T.text3,
+                      transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s ease",
+                    }}>▸</span>
+                  </div>
+
+                  <div style={{
+                    maxHeight: isOpen ? 500 : 0, overflow: "hidden",
+                    transition: "max-height 0.3s ease",
+                  }}>
+                    {h.witnesses.length > 0 ? (
+                      <div style={{ overflow: "auto", borderTop: `1px solid ${T.border0}` }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead style={{ background: T.bg3 }}>
+                            <tr>
+                              <th style={thS}>Type</th>
+                              <th style={thS}>Regime</th>
+                              <th style={thS}>Technique</th>
+                              <th style={thS}>Result</th>
+                              <th style={thS}>Age</th>
+                              <th style={{ ...thS, minWidth: 90 }}>Decay</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...h.witnesses].sort((a,b)=>b.ts-a.ts).map(w => (
+                              <WitnessRow key={w.id} w={w} now={now} />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div style={{ padding: "12px", fontFamily: T.mono, fontSize: "0.72rem", color: T.text3, fontStyle: "italic", borderTop: `1px solid ${T.border0}` }}>
+                        No witnesses recorded — hypothesis untested
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </Section>
+
+          {/* RIGHT COLUMN */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Techniques */}
+            <Section title="Forecast Techniques" count={TECHNIQUES.length} color={T.orange}>
+              <div style={{ marginBottom: 10 }}>
+                <Segmented
+                  options={[{ key: "logLoss", label: "Log Loss" }, { key: "brier", label: "Brier" }, { key: "ece", label: "ECE" }]}
+                  active={metric} onChange={setMetric}
+                />
+              </div>
+              <TechChart techniques={TECHNIQUES} metric={metric} />
+              <div style={{ overflow: "auto", borderRadius: T.rMd, border: `1px solid ${T.border0}`, marginTop: 12 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead style={{ background: T.bg2 }}>
+                    <tr>
+                      <th style={thS}></th>
+                      <th style={thS}>Technique</th>
+                      <th style={thS}>LL</th>
+                      <th style={thS}>BR</th>
+                      <th style={thS}>ECE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...TECHNIQUES].sort((a,b)=>a.scores.at(-1).ll - b.scores.at(-1).ll).map(t => {
+                      const latest = t.scores.at(-1);
+                      const isBest = t.id === bestT?.id;
+                      const color = TECH_COLOR[t.id] || T.text2;
+                      return (
+                        <tr key={t.id} style={{ background: isBest ? T.greenDim : "transparent" }}>
+                          <td style={tdS}><StatusDot color={color} size={6} /></td>
+                          <td style={{ ...tdS, color: T.text0, fontWeight: isBest ? 600 : 400 }}>{t.name}{isBest ? " ★" : ""}</td>
+                          <td style={tdS}>{latest.ll.toFixed(3)}</td>
+                          <td style={tdS}>{latest.br.toFixed(3)}</td>
+                          <td style={tdS}>{latest.ec.toFixed(3)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            {/* Catalysts */}
+            <Section title="Catalytic Metabolism" count={CATALYSTS.reduce((a,c)=>a+c.firings,0)} color={T.purple}>
+              {CATALYSTS.map(cat => {
+                const age = now - cat.lastFired;
+                const heat = Math.max(0.1, 1 - age / (2 * HOUR));
+                const heatColor = heat > 0.7 ? T.green : heat > 0.3 ? T.yellow : T.text3;
+                return (
+                  <div key={cat.id} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                    borderBottom: `1px solid ${T.border0}`,
+                  }}>
+                    <StatusDot color={heatColor} pulse={heat > 0.5} size={8} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <span style={{ fontFamily: T.mono, fontSize: "0.72rem", fontWeight: 500, color: T.text0 }}>{cat.name}</span>
+                        <span style={{
+                          fontFamily: T.mono, fontSize: "0.54rem", padding: "0.12em 0.4em",
+                          borderRadius: T.rSm,
+                          background: cat.contract === "nonincreasing" ? T.greenDim : T.yellowDim,
+                          color: cat.contract === "nonincreasing" ? T.green : T.yellow,
+                        }}>{cat.contract}</span>
+                      </div>
+                      <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3 }}>{cat.pattern}</div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontFamily: T.mono, fontSize: "0.72rem", fontWeight: 600, color: cat.energyDelta < 0 ? T.green : T.crimson }}>
+                        ΔE {cat.energyDelta > 0 ? "+" : ""}{cat.energyDelta.toFixed(3)}
+                      </div>
+                      <div style={{ fontFamily: T.mono, fontSize: "0.58rem", color: T.text3, marginTop: 1 }}>
+                        {ago(age)} ago · {cat.firings}×
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 4px" }}>
+                <span style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.text2 }}>System Lyapunov ΔE</span>
+                <span style={{ fontFamily: T.display, fontWeight: 700, fontSize: "1rem", color: catEnergy < 0 ? T.green : T.crimson }}>
+                  {catEnergy.toFixed(3)} {catEnergy < 0 ? "↓ stable" : "↑ bounded"}
+                </span>
+              </div>
+            </Section>
+
+            {/* Streams */}
+            <Section title="External Correlate Streams" count={STREAMS.length} color={T.blue}>
+              {STREAMS.map(s => {
+                const age = now - s.freshness;
+                const frac = Math.min(1, age / (3 * DAY));
+                const freshColor = frac < 0.1 ? T.green : frac < 0.4 ? T.yellow : T.crimson;
+                return (
+                  <div key={s.id} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                    borderBottom: `1px solid ${T.border0}`,
+                  }}>
+                    <StatusDot color={freshColor} pulse={frac < 0.1} size={7} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                        <span style={{ fontFamily: T.mono, fontSize: "0.72rem", color: T.text0 }}>{s.name}</span>
+                        {s.keyed && (
+                          <span style={{
+                            fontFamily: T.mono, fontSize: "0.52rem", padding: "0.1em 0.35em",
+                            borderRadius: T.rSm, background: T.yellowDim, color: T.yellow,
+                          }}>API key</span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ flex: 1 }}><ProgressBar value={1 - frac} color={freshColor} /></div>
+                        <span style={{ fontFamily: T.mono, fontSize: "0.58rem", color: freshColor, minWidth: 32 }}>{ago(age)}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: s.quality > 0.95 ? T.green : s.quality > 0.90 ? T.yellow : T.crimson }}>
+                        Q {(s.quality * 100).toFixed(0)}%
+                      </div>
+                      <div style={{ fontFamily: T.mono, fontSize: "0.54rem", color: T.text3 }}>gap {(s.gapRate * 100).toFixed(1)}%</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </Section>
+
+          </div>
+        </div>
+
+        {/* FOOTER LEGEND */}
+        <div style={{
+          marginTop: 24, paddingTop: 12, borderTop: `1px solid ${T.border0}`,
+          display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
+        }}>
+          <span style={{ fontFamily: T.mono, fontSize: "0.55rem", textTransform: "uppercase", letterSpacing: "0.16em", color: T.text3, marginRight: 6 }}>Epistemic Levels</span>
+          {Object.keys(LEVEL_COLOR).map(k => <Chip key={k} level={k}>{k}</Chip>)}
+        </div>
+      </div>
+    </div>
+  );
+}
