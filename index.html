@@ -1751,7 +1751,7 @@ function MetricCard({ label, value, unit, delta, deltaDir, color }) {
     <div style={{ background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:16 }}>
       <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.14em", color:T.text3, marginBottom:6 }}>{label}</div>
       <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.6rem", color:color||T.text0, lineHeight:1 }}>
-        {value}{unit && <span style={{ fontSize:"0.8rem", fontWeight:400 }}>{unit}</span>}
+        {value}{unit && <span style={{ fontSize:T.fs.sm, fontWeight:400 }}>{unit}</span>}
       </div>
       {delta && <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, marginTop:6, color: deltaDir==="up"?T.green:deltaDir==="down"?T.crimson:T.text3 }}>{delta}</div>}
     </div>
@@ -1764,7 +1764,7 @@ function Section({ title, count, color, children, style:sx }) {
       {color && <div style={{ height:3, width:"100%", background:color }} />}
       <div style={{ padding:"14px 16px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${T.border0}` }}>
-          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.95rem", color:T.text0 }}>{title}</span>
+          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.lg, color:T.text0 }}>{title}</span>
           {count !== undefined && <Badge color={color||T.teal}>{count}</Badge>}
         </div>
         {children}
@@ -1793,17 +1793,32 @@ function Segmented({ options, active, onChange }) {
 // ═══════════════════════════════════════════════════════════════
 
 function TabBar({ tabs, active, onChange }) {
+  const handleKeyDown = useCallback((e, idx) => {
+    let next = idx;
+    if (e.key === "ArrowRight") next = (idx + 1) % tabs.length;
+    else if (e.key === "ArrowLeft") next = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = tabs.length - 1;
+    else return;
+    e.preventDefault();
+    onChange(tabs[next].key);
+    e.currentTarget.parentElement.children[next]?.focus();
+  }, [tabs, onChange]);
+
   return (
-    <div style={{ display:"flex", gap:2, background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:3, marginBottom:24 }}>
-      {tabs.map(t => (
-        <button key={t.key} onClick={() => onChange(t.key)} style={{
-          flex:1, fontFamily:T.mono, fontSize:T.fs.sm, fontWeight: active===t.key ? 600 : 400,
-          padding:"10px 12px", borderRadius:T.rSm, border:"none", cursor:"pointer",
-          background: active===t.key ? T.bg4 : "transparent",
-          color: active===t.key ? T.text0 : T.text3,
-          transition:"all 0.2s ease",
-          borderBottom: active===t.key ? `2px solid ${t.color || T.teal}` : "2px solid transparent",
-        }}>{t.label}</button>
+    <div role="tablist" aria-label="Navigation tabs" style={{ display:"flex", gap:2, background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:3, marginBottom:24, overflowX:"auto" }}>
+      {tabs.map((t, idx) => (
+        <button key={t.key} role="tab" aria-selected={active===t.key} tabIndex={active===t.key ? 0 : -1}
+          onClick={() => onChange(t.key)} onKeyDown={e => handleKeyDown(e, idx)}
+          style={{
+            flex:1, fontFamily:T.mono, fontSize:T.fs.sm, fontWeight: active===t.key ? 600 : 400,
+            padding:"10px 12px", borderRadius:T.rSm, border:"none", cursor:"pointer",
+            background: active===t.key ? T.bg4 : "transparent",
+            color: active===t.key ? T.text0 : T.text3,
+            transition:"all 0.2s ease",
+            borderBottom: active===t.key ? `3px solid ${t.color || T.teal}` : "3px solid transparent",
+            minWidth:"fit-content", whiteSpace:"nowrap",
+          }}>{t.label}</button>
       ))}
     </div>
   );
@@ -1811,12 +1826,16 @@ function TabBar({ tabs, active, onChange }) {
 
 function TechCard({ tech, expanded, onToggle }) {
   const fc = familyColor(tech.family);
+  const [hovered, setHovered] = useState(false);
   const roleColors = { transform:T.green, feature:T.blue, model:T.orange, calibration:T.purple, decision:T.red };
   const riskColors = { low:T.green, medium:T.yellow, high:T.crimson };
   return (
-    <div style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden" }}>
+    <div aria-expanded={expanded} style={{ background: hovered ? T.bg3 : T.bg2, border:`1px solid ${expanded ? fc+"44" : T.border0}`, borderRadius:T.rMd, overflow:"hidden", transition:"background 150ms, border-color 150ms" }}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div style={{ height:2, background:fc }} />
-      <div onClick={onToggle} style={{ padding:"12px 14px", cursor:"pointer" }}>
+      <div onClick={onToggle} role="button" tabIndex={0} aria-label={`${tech.name} — ${expanded?"collapse":"expand"}`}
+        onKeyDown={e => { if(e.key==="Enter"||e.key===" "){e.preventDefault();onToggle();} }}
+        style={{ padding:"12px 14px", cursor:"pointer" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
           <StatusDot color={fc} size={7} />
           <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{tech.name}</span>
@@ -2050,7 +2069,7 @@ function PrincipleCard({ p, expanded, onToggle }) {
 function TechniquesTab() {
   const [search, setSearch] = useState("");
   const [familyFilter, setFamilyFilter] = useState("all");
-  const [expanded, setExpanded] = useState(new Set());
+  const [expanded, setExpanded] = useState(() => new Set(TECHNIQUES.length > 0 ? [TECHNIQUES[0].id] : []));
 
   const filtered = useMemo(() => {
     return TECHNIQUES.filter(t => {
@@ -2087,7 +2106,11 @@ function TechniquesTab() {
 // ═══════════════════════════════════════════════════════════════
 
 function ComposerTab() {
-  const [pipeline, setPipeline] = useState([]);
+  // Smart default: pre-load Quick Baseline pipeline
+  const [pipeline, setPipeline] = useState(() => {
+    const qb = CANONICAL_PIPELINES.find(p => p.id === "quick_baseline");
+    return qb ? [...qb.steps] : [];
+  });
   const [familyFilter, setFamilyFilter] = useState("all");
 
   const addTech = useCallback(id => {
@@ -2157,7 +2180,7 @@ function ComposerTab() {
                               {(pairChecks[idx].score*100).toFixed(0)}%
                             </div>
                             <div style={{ width:20, height:2, background: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson }} />
-                            <span style={{ fontFamily:T.mono, fontSize:"0.7rem", color: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson }}>→</span>
+                            <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson }}>→</span>
                           </React.Fragment>
                         )}
                       </div>
@@ -2223,7 +2246,7 @@ function ComposerTab() {
               cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${T.blue}`, display:"block", width:"100%",
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.78rem", color:T.text0, flex:1 }}>{cp.name}</span>
+                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.sm, color:T.text0, flex:1 }}>{cp.name}</span>
                 <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
                   background:T.bg4, color:T.text3 }}>complexity {cp.complexity}</span>
               </div>
@@ -2525,7 +2548,7 @@ function CondensedLogsTab() {
                 <div onClick={() => toggleArch(arch.id)} style={{ padding:"10px 12px", cursor:"pointer" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <StatusDot color={T.teal} size={7} />
-                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.85rem", color:T.text0, flex:1 }}>{arch.name}</span>
+                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{arch.name}</span>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
                   </div>
                   <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginTop:4, marginLeft:15 }}>{arch.description}</div>
@@ -2597,6 +2620,13 @@ function ObservatoryTab() {
   useEffect(() => {
     return FeedManager.subscribe(() => setFeedDiag(FeedManager.getDiagnostics()));
   }, []);
+
+  // Smart default: auto-load first synthetic feed on mount
+  useEffect(() => {
+    if (!feedData && SYNTHETIC_FEEDS.length > 0) {
+      loadSynthetic(SYNTHETIC_FEEDS[0]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadLiveFeed = useCallback(async (feed) => {
     setLoading(true); setError(null); setFeedData(null); setChars(null);
@@ -2880,7 +2910,7 @@ function ObservatoryTab() {
                   <div key={p.id} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd,
                     padding:"10px 12px", borderLeft:`3px solid ${T.green}` }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                      <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.78rem", color:T.text0, flex:1 }}>{p.name}</span>
+                      <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.sm, color:T.text0, flex:1 }}>{p.name}</span>
                       <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                         background:T.bg4, color:T.text3 }}>complexity {p.complexity}</span>
                     </div>
@@ -2913,7 +2943,7 @@ function ObservatoryTab() {
 
       {/* Empty state */}
       {!feedData && !loading && !error && (
-        <div style={{ textAlign:"center", padding:"32px 0", fontFamily:T.mono, fontSize:"0.78rem", color:T.text3 }}>
+        <div style={{ textAlign:"center", padding:"32px 0", fontFamily:T.mono, fontSize:T.fs.sm, color:T.text3 }}>
           Select a live feed or synthetic generator above to analyze
         </div>
       )}
@@ -3398,6 +3428,15 @@ function CausalTab() {
     const timer = setTimeout(() => setCurrentStep(s => s + 1), 1500);
     return () => clearTimeout(timer);
   }, [autoPlay, currentStep, steps]);
+
+  // Smart default: auto-run default experiment on first mount
+  const hasRun = useRef(false);
+  useEffect(() => {
+    if (!hasRun.current) {
+      hasRun.current = true;
+      runExperiment();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load live feed pair for causal analysis — via FeedManager
   const loadLivePair = useCallback(async (feedA, feedB) => {
@@ -3897,7 +3936,7 @@ function CausalTab() {
                     <div style={{ padding:"10px 14px" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                         <Badge color={step.color}>{step.id}</Badge>
-                        <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.85rem", color:T.text0, flex:1 }}>{step.title}</span>
+                        <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{step.title}</span>
                       </div>
                       <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:step.color, marginBottom:4, padding:"4px 8px", background:`${step.color}0a`, borderRadius:T.rSm, display:"inline-block" }}>
                         {step.math}
