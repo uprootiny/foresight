@@ -1087,6 +1087,312 @@ function recommendPipelines(chars) {
   });
 }
 
+// ─── Forecasters ─────────────────────────────────────────────
+
+function forecast(method, data, horizon) {
+  const n = data.length;
+  if (n < 4) return null;
+  const h = horizon || Math.max(5, Math.round(n * 0.1));
+
+  // residual std from last portion for prediction intervals
+  function residualStd(fitted) {
+    let ss = 0, ct = 0;
+    for (let i = 0; i < fitted.length; i++) {
+      if (fitted[i] !== null) { ss += (data[n - fitted.length + i] - fitted[i]) ** 2; ct++; }
+    }
+    return ct > 1 ? Math.sqrt(ss / (ct - 1)) : 1;
+  }
+
+  function makeBands(point, sig) {
+    return {
+      point,
+      lower: point.map((v, i) => v - 1.96 * sig * Math.sqrt(i + 1)),
+      upper: point.map((v, i) => v + 1.96 * sig * Math.sqrt(i + 1)),
+    };
+  }
+
+  if (method === "naive") {
+    const last = data[n - 1];
+    const pt = Array(h).fill(last);
+    // residual = diff of consecutive values
+    let ss = 0;
+    for (let i = 1; i < n; i++) ss += (data[i] - data[i - 1]) ** 2;
+    const sig = Math.sqrt(ss / (n - 1));
+    return { ...makeBands(pt, sig), name: "Naive", fitted: Array(n).fill(null).map((_, i) => i > 0 ? data[i - 1] : null) };
+  }
+
+  if (method === "seasonal_naive") {
+    // detect period from ACF
+    const maxLag = Math.min(Math.floor(n / 2), 60);
+    const mean = data.reduce((s, v) => s + v, 0) / n;
+    let bestLag = 7, bestAcf = -1;
+    for (let lag = 2; lag <= maxLag; lag++) {
+      let num = 0, d1 = 0, d2 = 0;
+      for (let i = lag; i < n; i++) {
+        num += (data[i] - mean) * (data[i - lag] - mean);
+        d1 += (data[i] - mean) ** 2;
+        d2 += (data[i - lag] - mean) ** 2;
+      }
+      const acf = d1 > 0 && d2 > 0 ? num / Math.sqrt(d1 * d2) : 0;
+      if (acf > bestAcf) { bestAcf = acf; bestLag = lag; }
+    }
+    const m = bestLag;
+    const pt = Array.from({ length: h }, (_, i) => data[n - m + (i % m)]);
+    const fitted = Array(n).fill(null).map((_, i) => i >= m ? data[i - m] : null);
+    const sig = residualStd(fitted.filter(v => v !== null).length > 0 ? fitted : [data[n-1]]);
+    return { ...makeBands(pt, sig), name: `Seasonal Naive (m=${m})`, fitted };
+  }
+
+  if (method === "ewma") {
+    // optimize alpha by minimizing one-step MSE
+    let bestAlpha = 0.3, bestMSE = Infinity;
+    for (let a = 0.05; a <= 0.95; a += 0.05) {
+      let s = data[0], mse = 0;
+      for (let i = 1; i < n; i++) {
+        mse += (data[i] - s) ** 2;
+        s = a * data[i] + (1 - a) * s;
+      }
+      mse /= (n - 1);
+      if (mse < bestMSE) { bestMSE = mse; bestAlpha = a; }
+    }
+    const alpha = bestAlpha;
+    let level = data[0];
+    const fitted = [null];
+    for (let i = 1; i < n; i++) {
+      fitted.push(level);
+      level = alpha * data[i] + (1 - alpha) * level;
+    }
+    const pt = Array(h).fill(level);
+    const sig = Math.sqrt(bestMSE);
+    return { ...makeBands(pt, sig), name: `EWMA (α=${alpha.toFixed(2)})`, fitted };
+  }
+
+  if (method === "ses") {
+    // simple exponential smoothing = same as EWMA but framed as forecast
+    return forecast("ewma", data, horizon);
+  }
+
+  if (method === "holt") {
+    // Holt's linear trend method
+    // grid search alpha, beta
+    let bestA = 0.3, bestB = 0.1, bestMSE = Infinity;
+    for (let a = 0.1; a <= 0.9; a += 0.1) {
+      for (let b = 0.01; b <= 0.5; b += 0.05) {
+        let l = data[0], t = data[1] - data[0], mse = 0;
+        for (let i = 1; i < n; i++) {
+          const pred = l + t;
+          mse += (data[i] - pred) ** 2;
+          const nl = a * data[i] + (1 - a) * (l + t);
+          t = b * (nl - l) + (1 - b) * t;
+          l = nl;
+        }
+        mse /= (n - 1);
+        if (mse < bestMSE) { bestMSE = mse; bestA = a; bestB = b; }
+      }
+    }
+    let l = data[0], t = data[1] - data[0];
+    const fitted = [null];
+    for (let i = 1; i < n; i++) {
+      fitted.push(l + t);
+      const nl = bestA * data[i] + (1 - bestA) * (l + t);
+      t = bestB * (nl - l) + (1 - bestB) * t;
+      l = nl;
+    }
+    const pt = Array.from({ length: h }, (_, i) => l + t * (i + 1));
+    const sig = Math.sqrt(bestMSE);
+    return { ...makeBands(pt, sig), name: `Holt (α=${bestA.toFixed(1)}, β=${bestB.toFixed(2)})`, fitted };
+  }
+
+  if (method === "holt_winters") {
+    // additive Holt-Winters
+    const maxLag = Math.min(Math.floor(n / 2), 60);
+    const mean = data.reduce((s, v) => s + v, 0) / n;
+    let m = 7, bestAcf = -1;
+    for (let lag = 2; lag <= maxLag; lag++) {
+      let num = 0, d1 = 0, d2 = 0;
+      for (let i = lag; i < n; i++) {
+        num += (data[i] - mean) * (data[i - lag] - mean);
+        d1 += (data[i] - mean) ** 2;
+        d2 += (data[i - lag] - mean) ** 2;
+      }
+      const acf = d1 > 0 && d2 > 0 ? num / Math.sqrt(d1 * d2) : 0;
+      if (acf > bestAcf) { bestAcf = acf; m = lag; }
+    }
+    if (n < 2 * m) return forecast("holt", data, horizon); // fallback
+
+    // initialize
+    const alpha = 0.3, beta = 0.1, gamma = 0.3;
+    let l = data.slice(0, m).reduce((s, v) => s + v, 0) / m;
+    let b = (data.slice(m, 2 * m).reduce((s, v) => s + v, 0) - data.slice(0, m).reduce((s, v) => s + v, 0)) / (m * m);
+    const s = data.slice(0, m).map(v => v - l);
+    const fitted = new Array(m).fill(null);
+    let mse = 0, ct = 0;
+    for (let i = m; i < n; i++) {
+      const pred = l + b + s[i % m];
+      fitted.push(pred);
+      mse += (data[i] - pred) ** 2; ct++;
+      const nl = alpha * (data[i] - s[i % m]) + (1 - alpha) * (l + b);
+      const nb = beta * (nl - l) + (1 - beta) * b;
+      s[i % m] = gamma * (data[i] - nl) + (1 - gamma) * s[i % m];
+      l = nl; b = nb;
+    }
+    mse = ct > 0 ? mse / ct : 1;
+    const pt = Array.from({ length: h }, (_, i) => l + b * (i + 1) + s[(n + i) % m]);
+    const sig = Math.sqrt(mse);
+    return { ...makeBands(pt, sig), name: `Holt-Winters (m=${m})`, fitted };
+  }
+
+  if (method === "drift") {
+    // random walk with drift
+    const drift = (data[n - 1] - data[0]) / (n - 1);
+    const pt = Array.from({ length: h }, (_, i) => data[n - 1] + drift * (i + 1));
+    let ss = 0;
+    for (let i = 1; i < n; i++) ss += (data[i] - data[i - 1] - drift) ** 2;
+    const sig = Math.sqrt(ss / (n - 2));
+    const fitted = [null];
+    for (let i = 1; i < n; i++) fitted.push(data[i - 1] + drift);
+    return { ...makeBands(pt, sig), name: `Drift (δ=${drift.toFixed(4)})`, fitted };
+  }
+
+  if (method === "ar") {
+    // AR(p) by OLS, p chosen by AIC-like criterion
+    const maxP = Math.min(12, Math.floor(n / 5));
+    let bestP = 1, bestAIC = Infinity;
+    for (let p = 1; p <= maxP; p++) {
+      const m = n - p;
+      const X = [], y = [];
+      for (let i = p; i < n; i++) {
+        const row = [];
+        for (let j = 1; j <= p; j++) row.push(data[i - j]);
+        row.push(1); // intercept
+        X.push(row);
+        y.push(data[i]);
+      }
+      // OLS: solve X'X beta = X'y
+      const k = p + 1;
+      const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
+      const Xty = new Array(k).fill(0);
+      for (let i = 0; i < m; i++) {
+        for (let a = 0; a < k; a++) {
+          Xty[a] += X[i][a] * y[i];
+          for (let b = 0; b < k; b++) XtX[a][b] += X[i][a] * X[i][b];
+        }
+      }
+      // Gauss elimination
+      const aug = XtX.map((row, i) => [...row, Xty[i]]);
+      for (let col = 0; col < k; col++) {
+        let maxR = col;
+        for (let r = col + 1; r < k; r++) if (Math.abs(aug[r][col]) > Math.abs(aug[maxR][col])) maxR = r;
+        [aug[col], aug[maxR]] = [aug[maxR], aug[col]];
+        if (Math.abs(aug[col][col]) < 1e-12) continue;
+        for (let r = 0; r < k; r++) {
+          if (r === col) continue;
+          const f = aug[r][col] / aug[col][col];
+          for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
+        }
+      }
+      const beta = aug.map((row, i) => Math.abs(row[i]) > 1e-12 ? row[k] / row[i] : 0);
+      let rss = 0;
+      for (let i = 0; i < m; i++) {
+        let pred = 0;
+        for (let j = 0; j < k; j++) pred += X[i][j] * beta[j];
+        rss += (y[i] - pred) ** 2;
+      }
+      const aic = m * Math.log(rss / m + 1e-15) + 2 * k;
+      if (aic < bestAIC) { bestAIC = aic; bestP = p; }
+    }
+    // refit at bestP
+    const p = bestP;
+    const m = n - p, k = p + 1;
+    const X = [], y = [];
+    for (let i = p; i < n; i++) {
+      const row = [];
+      for (let j = 1; j <= p; j++) row.push(data[i - j]);
+      row.push(1);
+      X.push(row);
+      y.push(data[i]);
+    }
+    const XtX = Array.from({ length: k }, () => new Array(k).fill(0));
+    const Xty = new Array(k).fill(0);
+    for (let i = 0; i < m; i++) {
+      for (let a = 0; a < k; a++) {
+        Xty[a] += X[i][a] * y[i];
+        for (let b = 0; b < k; b++) XtX[a][b] += X[i][a] * X[i][b];
+      }
+    }
+    const aug = XtX.map((row, i) => [...row, Xty[i]]);
+    for (let col = 0; col < k; col++) {
+      let maxR = col;
+      for (let r = col + 1; r < k; r++) if (Math.abs(aug[r][col]) > Math.abs(aug[maxR][col])) maxR = r;
+      [aug[col], aug[maxR]] = [aug[maxR], aug[col]];
+      if (Math.abs(aug[col][col]) < 1e-12) continue;
+      for (let r = 0; r < k; r++) {
+        if (r === col) continue;
+        const f = aug[r][col] / aug[col][col];
+        for (let c = col; c <= k; c++) aug[r][c] -= f * aug[col][c];
+      }
+    }
+    const beta = aug.map((row, i) => Math.abs(row[i]) > 1e-12 ? row[k] / row[i] : 0);
+    const fitted = new Array(p).fill(null);
+    let rss = 0;
+    for (let i = 0; i < m; i++) {
+      let pred = 0;
+      for (let j = 0; j < k; j++) pred += X[i][j] * beta[j];
+      fitted.push(pred);
+      rss += (y[i] - pred) ** 2;
+    }
+    const sig = Math.sqrt(rss / (m - k));
+    // recursive forecast
+    const buf = data.slice(-p);
+    const pt = [];
+    for (let i = 0; i < h; i++) {
+      let pred = beta[p]; // intercept
+      for (let j = 0; j < p; j++) pred += beta[j] * buf[buf.length - 1 - j];
+      pt.push(pred);
+      buf.push(pred);
+    }
+    return { ...makeBands(pt, sig), name: `AR(${p})`, fitted };
+  }
+
+  // fallback
+  return forecast("naive", data, horizon);
+}
+
+function backtest(method, data, holdout) {
+  const ho = holdout || Math.max(5, Math.round(data.length * 0.15));
+  const train = data.slice(0, data.length - ho);
+  const actual = data.slice(data.length - ho);
+  const fc = forecast(method, train, ho);
+  if (!fc) return null;
+  let mae = 0, mse = 0, mape = 0, ct = 0;
+  for (let i = 0; i < ho; i++) {
+    const e = actual[i] - fc.point[i];
+    mae += Math.abs(e);
+    mse += e * e;
+    if (Math.abs(actual[i]) > 1e-10) { mape += Math.abs(e / actual[i]); ct++; }
+  }
+  mae /= ho;
+  const rmse = Math.sqrt(mse / ho);
+  mape = ct > 0 ? (mape / ct) * 100 : null;
+  // coverage: what fraction of actuals fell within prediction interval
+  let covered = 0;
+  for (let i = 0; i < ho; i++) {
+    if (actual[i] >= fc.lower[i] && actual[i] <= fc.upper[i]) covered++;
+  }
+  const coverage = covered / ho;
+  return { method, name: fc.name, mae, rmse, mape, coverage, actual, predicted: fc.point, lower: fc.lower, upper: fc.upper, holdout: ho };
+}
+
+const FORECAST_METHODS = [
+  { id: "naive", label: "Naive" },
+  { id: "seasonal_naive", label: "Seasonal Naive" },
+  { id: "ewma", label: "EWMA" },
+  { id: "holt", label: "Holt Linear" },
+  { id: "holt_winters", label: "Holt-Winters" },
+  { id: "drift", label: "Drift" },
+  { id: "ar", label: "AR(p)" },
+];
+
 // ─── Feed Definitions ────────────────────────────────────────
 
 // ═══════════════════════════════════════════════════════════════
@@ -2770,6 +3076,9 @@ function ObservatoryTab() {
 
   const [feedMeta, setFeedMeta] = useState(null); // {fromCache, age}
   const [feedDiag, setFeedDiag] = useState(null);
+  const [fcMethod, setFcMethod] = useState("ewma");
+  const [fcResults, setFcResults] = useState(null);
+  const [btResults, setBtResults] = useState(null);
 
   // Subscribe to FeedManager state changes
   useEffect(() => {
@@ -3064,6 +3373,159 @@ function ObservatoryTab() {
             </Section>
           )}
         </div>
+      )}
+
+      {/* ═══ FORECAST PANEL ═══ */}
+      {feedData && feedData.length > 20 && (
+        <Section title="Forecast" color={T.accent} style={{ marginTop:12 }}>
+          <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:12 }}>
+            {FORECAST_METHODS.map(m => (
+              <button key={m.id} onClick={() => { setFcMethod(m.id); setFcResults(null); setBtResults(null); }} style={{
+                fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 10px", borderRadius:T.rSm, cursor:"pointer",
+                background: fcMethod === m.id ? T.accentDim : T.bg3,
+                border: `1px solid ${fcMethod === m.id ? T.accent : T.border1}`,
+                color: fcMethod === m.id ? T.accent : T.text2,
+              }}>{m.label}</button>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            <button onClick={() => {
+              const fc = forecast(fcMethod, feedData, Math.max(10, Math.round(feedData.length * 0.15)));
+              setFcResults(fc);
+              const bt = backtest(fcMethod, feedData);
+              setBtResults(bt);
+            }} style={{
+              fontFamily:T.mono, fontSize:T.fs.sm, padding:"6px 16px", borderRadius:T.rSm, cursor:"pointer",
+              background:T.accent, border:"none", color:"#fff", fontWeight:600,
+            }}>Run Forecast</button>
+            <button onClick={() => {
+              const all = FORECAST_METHODS.map(m => backtest(m.id, feedData)).filter(Boolean);
+              setBtResults(all);
+              setFcResults(null);
+            }} style={{
+              fontFamily:T.mono, fontSize:T.fs.xs, padding:"6px 12px", borderRadius:T.rSm, cursor:"pointer",
+              background:T.bg3, border:`1px solid ${T.border1}`, color:T.text2,
+            }}>Compare All Methods</button>
+          </div>
+
+          {/* Single forecast result */}
+          {fcResults && !Array.isArray(btResults) && (
+            <div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600, marginBottom:8 }}>{fcResults.name}</div>
+              {/* Combined chart: history + forecast */}
+              <div style={{ background:T.bg2, borderRadius:T.rSm, padding:8, marginBottom:10 }}>
+                <svg width="100%" height={120} viewBox={`0 0 ${feedData.length + fcResults.point.length} 100`} preserveAspectRatio="none" style={{ display:"block" }}>
+                  {(() => {
+                    const all = [...feedData, ...fcResults.point];
+                    const lo = [...feedData.map(() => null), ...fcResults.lower];
+                    const hi = [...feedData.map(() => null), ...fcResults.upper];
+                    const vMin = Math.min(...all, ...fcResults.lower);
+                    const vMax = Math.max(...all, ...fcResults.upper);
+                    const vR = vMax - vMin || 1;
+                    const toY = v => 95 - ((v - vMin) / vR) * 90;
+                    const toX = i => i;
+                    const n = feedData.length;
+                    const histPts = feedData.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
+                    const fcPts = fcResults.point.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ");
+                    // confidence band
+                    const bandPts = fcResults.point.map((_, i) => `${toX(n + i)},${toY(fcResults.upper[i])}`).join(" ")
+                      + " " + [...fcResults.point].reverse().map((_, i) => {
+                        const ri = fcResults.point.length - 1 - i;
+                        return `${toX(n + ri)},${toY(fcResults.lower[ri])}`;
+                      }).join(" ");
+                    return (
+                      <React.Fragment>
+                        <polygon points={bandPts} fill={T.accent} fillOpacity={0.15} />
+                        <line x1={n} y1={0} x2={n} y2={100} stroke={T.text3} strokeWidth={0.3} strokeDasharray="2,2" />
+                        <polyline points={histPts} fill="none" stroke={T.text2} strokeWidth={0.5} />
+                        <polyline points={`${toX(n-1)},${toY(feedData[n-1])} ${fcPts}`} fill="none" stroke={T.accent} strokeWidth={0.8} />
+                        <polyline points={fcResults.upper.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ")} fill="none" stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
+                        <polyline points={fcResults.lower.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ")} fill="none" stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
+                        <text x={n + 2} y={8} style={{ fontFamily:T.mono, fontSize:3, fill:T.accent }}>forecast →</text>
+                      </React.Fragment>
+                    );
+                  })()}
+                </svg>
+              </div>
+              {btResults && !Array.isArray(btResults) && (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:8 }}>
+                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAE</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mae.toFixed(3)}</div>
+                  </div>
+                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>RMSE</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.rmse.toFixed(3)}</div>
+                  </div>
+                  {btResults.mape !== null && (
+                    <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAPE</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mape.toFixed(1)}%</div>
+                    </div>
+                  )}
+                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>95% Coverage</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:700,
+                      color: btResults.coverage > 0.9 ? T.green : btResults.coverage > 0.8 ? T.yellow : T.crimson }}>
+                      {(btResults.coverage * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>Holdout</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.holdout} pts</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Comparison table */}
+          {Array.isArray(btResults) && btResults.length > 0 && (
+            <div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:8 }}>
+                Holdout backtest: last {btResults[0].holdout} points held out, forecast vs actual
+              </div>
+              <div style={{ overflowX:"auto" }}>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontFamily:T.mono, fontSize:T.fs.xs }}>
+                  <thead>
+                    <tr style={{ borderBottom:`1px solid ${T.border1}` }}>
+                      {["Method","MAE","RMSE","MAPE","95% Cov",""].map(h => (
+                        <th key={h} style={{ padding:"6px 8px", textAlign:"left", color:T.text3, fontWeight:400, textTransform:"uppercase", letterSpacing:"0.05em" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {btResults.sort((a,b) => a.rmse - b.rmse).map((bt, idx) => {
+                      const best = idx === 0;
+                      return (
+                        <tr key={bt.method} style={{ borderBottom:`1px solid ${T.border0}`, background: best ? T.accentDim : "transparent" }}>
+                          <td style={{ padding:"6px 8px", color: best ? T.accent : T.text0, fontWeight: best ? 700 : 400 }}>{bt.name}</td>
+                          <td style={{ padding:"6px 8px", color:T.text1 }}>{bt.mae.toFixed(3)}</td>
+                          <td style={{ padding:"6px 8px", color:T.text1 }}>{bt.rmse.toFixed(3)}</td>
+                          <td style={{ padding:"6px 8px", color:T.text1 }}>{bt.mape !== null ? bt.mape.toFixed(1)+"%" : "—"}</td>
+                          <td style={{ padding:"6px 8px", color: bt.coverage > 0.9 ? T.green : bt.coverage > 0.8 ? T.yellow : T.crimson }}>
+                            {(bt.coverage * 100).toFixed(0)}%
+                          </td>
+                          <td style={{ padding:"6px 8px" }}>
+                            <button onClick={() => {
+                              setFcMethod(bt.method);
+                              const fc = forecast(bt.method, feedData, bt.holdout);
+                              setFcResults(fc);
+                              setBtResults(bt);
+                            }} style={{
+                              fontFamily:T.mono, fontSize:T.fs.xs, padding:"2px 8px", borderRadius:T.rSm,
+                              background:T.bg3, border:`1px solid ${T.border1}`, color:T.text2, cursor:"pointer",
+                            }}>view</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </Section>
       )}
 
       {/* Empty state */}
