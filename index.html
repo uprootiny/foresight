@@ -1089,6 +1089,186 @@ function recommendPipelines(chars) {
 
 // ─── Feed Definitions ────────────────────────────────────────
 
+// ═══════════════════════════════════════════════════════════════
+// FEED MANAGER — caching, rate limiting, circuit breakers, metering
+// ═══════════════════════════════════════════════════════════════
+
+const FeedManager = (() => {
+  const cache = new Map();       // url -> { data, timestamp, ttl }
+  const metrics = new Map();     // url -> { hits, misses, errors, totalMs, lastFetch, bytesTotal }
+  const breakers = new Map();    // url -> { failures, state:'closed'|'open'|'half-open', openedAt }
+  const queue = [];              // pending fetch queue
+  let inflight = 0;
+  const MAX_CONCURRENT = 3;
+  const DEFAULT_TTL = 5 * 60 * 1000;  // 5 min cache
+  const BREAKER_THRESHOLD = 3;        // failures before open
+  const BREAKER_COOLDOWN = 60 * 1000; // 1 min before half-open
+  const RATE_WINDOW = 10 * 1000;      // 10s rate window
+  const MAX_REQUESTS_PER_WINDOW = 6;
+  const recentRequests = [];           // timestamps of recent requests
+  const listeners = new Set();         // state change listeners
+
+  function emit() { listeners.forEach(fn => { try{fn()}catch(e){} }); }
+
+  function getMetrics(url) {
+    if (!metrics.has(url)) metrics.set(url, { hits:0, misses:0, errors:0, totalMs:0, lastFetch:null, bytesTotal:0, lastLatency:0 });
+    return metrics.get(url);
+  }
+
+  function getBreaker(url) {
+    if (!breakers.has(url)) breakers.set(url, { failures:0, state:"closed", openedAt:0 });
+    return breakers.get(url);
+  }
+
+  function checkRateLimit() {
+    const now = Date.now();
+    while (recentRequests.length > 0 && now - recentRequests[0] > RATE_WINDOW) recentRequests.shift();
+    return recentRequests.length < MAX_REQUESTS_PER_WINDOW;
+  }
+
+  function processQueue() {
+    while (queue.length > 0 && inflight < MAX_CONCURRENT && checkRateLimit()) {
+      const { url, feed, resolve, reject } = queue.shift();
+      inflight++;
+      recentRequests.push(Date.now());
+      doFetch(url, feed).then(resolve).catch(reject).finally(() => { inflight--; processQueue(); });
+    }
+    emit();
+  }
+
+  async function doFetch(url, feed) {
+    const m = getMetrics(url);
+    const b = getBreaker(url);
+    const t0 = performance.now();
+
+    // Circuit breaker check
+    if (b.state === "open") {
+      if (Date.now() - b.openedAt > BREAKER_COOLDOWN) {
+        b.state = "half-open";
+      } else {
+        m.errors++;
+        emit();
+        throw new Error(`Circuit open for ${feed.name} — too many failures. Retry in ${Math.ceil((BREAKER_COOLDOWN - (Date.now() - b.openedAt))/1000)}s`);
+      }
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const resp = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      const text = await resp.text();
+      const json = JSON.parse(text);
+      const parsed = feed.parse(json);
+      const values = parsed.values.filter(v => v != null && isFinite(v));
+      if (values.length < 10) throw new Error(`Only ${values.length} valid points (need ≥10)`);
+
+      const latency = performance.now() - t0;
+      m.misses++;
+      m.totalMs += latency;
+      m.lastFetch = Date.now();
+      m.lastLatency = latency;
+      m.bytesTotal += text.length;
+
+      // Success — reset breaker
+      b.failures = 0;
+      b.state = "closed";
+
+      // Cache the result
+      const result = { values, name: parsed.name || feed.name, raw: json };
+      cache.set(url, { data: result, timestamp: Date.now(), ttl: DEFAULT_TTL });
+      emit();
+      return result;
+    } catch (e) {
+      const latency = performance.now() - t0;
+      m.errors++;
+      m.totalMs += latency;
+      m.lastLatency = latency;
+      b.failures++;
+      if (b.failures >= BREAKER_THRESHOLD) {
+        b.state = "open";
+        b.openedAt = Date.now();
+      }
+      emit();
+      throw e;
+    }
+  }
+
+  return {
+    // Main fetch method — checks cache, rate limit, circuit breaker, queues
+    async fetch(feed, { forceFresh = false } = {}) {
+      const url = feed.url;
+      const m = getMetrics(url);
+
+      // Check cache
+      if (!forceFresh && cache.has(url)) {
+        const cached = cache.get(url);
+        if (Date.now() - cached.timestamp < cached.ttl) {
+          m.hits++;
+          emit();
+          return { ...cached.data, fromCache: true, age: Date.now() - cached.timestamp };
+        }
+      }
+
+      // Queue the fetch
+      return new Promise((resolve, reject) => {
+        queue.push({ url, feed, resolve, reject });
+        processQueue();
+      });
+    },
+
+    // Get cache entry without fetching
+    getCached(feed) {
+      const entry = cache.get(feed.url);
+      if (entry && Date.now() - entry.timestamp < entry.ttl) return { ...entry.data, age: Date.now() - entry.timestamp };
+      return null;
+    },
+
+    // Invalidate cache for a feed
+    invalidate(feed) { cache.delete(feed.url); emit(); },
+
+    // Get diagnostic snapshot
+    getDiagnostics() {
+      const diag = { feeds: [], totals: { hits:0, misses:0, errors:0, cached:0, avgLatency:0 }, inflight, queued: queue.length };
+      let totalLatency = 0, totalFetches = 0;
+      for (const [url, m] of metrics) {
+        const b = getBreaker(url);
+        const isCached = cache.has(url) && Date.now() - cache.get(url).timestamp < cache.get(url).ttl;
+        const feedName = LIVE_FEEDS.find(f => f.url === url)?.name || url.slice(0,40);
+        diag.feeds.push({
+          name: feedName, url,
+          hits: m.hits, misses: m.misses, errors: m.errors,
+          lastLatency: m.lastLatency, avgLatency: (m.misses+m.errors)>0 ? m.totalMs/(m.misses+m.errors) : 0,
+          bytesTotal: m.bytesTotal, lastFetch: m.lastFetch,
+          cached: isCached, cacheAge: isCached ? Date.now() - cache.get(url).timestamp : null,
+          breaker: b.state, failures: b.failures,
+        });
+        diag.totals.hits += m.hits;
+        diag.totals.misses += m.misses;
+        diag.totals.errors += m.errors;
+        if (isCached) diag.totals.cached++;
+        totalLatency += m.totalMs;
+        totalFetches += m.misses + m.errors;
+      }
+      diag.totals.avgLatency = totalFetches > 0 ? totalLatency / totalFetches : 0;
+      diag.rateWindow = { recent: recentRequests.filter(t => Date.now()-t < RATE_WINDOW).length, max: MAX_REQUESTS_PER_WINDOW };
+      return diag;
+    },
+
+    // Subscribe to state changes
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+
+    // Prefetch a batch of feeds
+    async prefetch(feeds) {
+      return Promise.allSettled(feeds.map(f => this.fetch(f)));
+    },
+
+    // Config
+    config: { MAX_CONCURRENT, DEFAULT_TTL, BREAKER_THRESHOLD, BREAKER_COOLDOWN, RATE_WINDOW, MAX_REQUESTS_PER_WINDOW },
+  };
+})();
+
 const LIVE_FEEDS = [
   { id:"weather_berlin", name:"Berlin Temperature", category:"weather", archetype:"seasonal",
     description:"Hourly temperature (past 90 days) — strong daily + seasonal cycles",
@@ -2410,19 +2590,23 @@ function ObservatoryTab() {
   const [pipeRecs, setPipeRecs] = useState([]);
   const [feedCategory, setFeedCategory] = useState("all");
 
+  const [feedMeta, setFeedMeta] = useState(null); // {fromCache, age}
+  const [feedDiag, setFeedDiag] = useState(null);
+
+  // Subscribe to FeedManager state changes
+  useEffect(() => {
+    return FeedManager.subscribe(() => setFeedDiag(FeedManager.getDiagnostics()));
+  }, []);
+
   const loadLiveFeed = useCallback(async (feed) => {
     setLoading(true); setError(null); setFeedData(null); setChars(null);
-    setTechRecs([]); setPipeRecs([]); setFeedName(feed.name);
+    setTechRecs([]); setPipeRecs([]); setFeedName(feed.name); setFeedMeta(null);
     try {
-      const resp = await fetch(feed.url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-      const json = await resp.json();
-      const parsed = feed.parse(json);
-      const values = parsed.values.filter(v => v != null && isFinite(v));
-      if (values.length < 10) throw new Error("Too few valid data points");
-      setFeedData(values);
-      setFeedName(parsed.name || feed.name);
-      const c = detectCharacteristics(values);
+      const result = await FeedManager.fetch(feed);
+      setFeedData(result.values);
+      setFeedName(result.name);
+      setFeedMeta({ fromCache: result.fromCache || false, age: result.age || 0 });
+      const c = detectCharacteristics(result.values);
       setChars(c);
       setTechRecs(recommendTechniques(c));
       setPipeRecs(recommendPipelines(c));
@@ -2453,9 +2637,13 @@ function ObservatoryTab() {
     <div>
       {/* Live Feeds */}
       <Section title="Live Data Feeds" count={LIVE_FEEDS.length} color={T.blue}>
-        <div style={{ marginBottom:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, flexWrap:"wrap" }}>
           <Segmented options={[{key:"all",label:`All (${LIVE_FEEDS.length})`}, ...feedCategories.map(c => ({key:c,label:`${c} (${LIVE_FEEDS.filter(f=>f.category===c).length})`}))]}
             active={feedCategory} onChange={setFeedCategory} />
+          <button onClick={() => FeedManager.prefetch(LIVE_FEEDS)} style={{
+            fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 10px", borderRadius:T.rSm, cursor:"pointer",
+            background:T.bg3, border:`1px solid ${T.border1}`, color:T.text2,
+          }}>⚡ Prefetch All</button>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:6 }}>
           {filteredFeeds.map(f => (
@@ -2498,9 +2686,63 @@ function ObservatoryTab() {
         </div>
       </Section>
 
+      {/* Feed Manager Diagnostics */}
+      {feedDiag && feedDiag.feeds.length > 0 && (
+        <Section title="Feed Diagnostics" count={feedDiag.feeds.length} color={T.text3} style={{ marginTop:12 }}>
+          {/* Summary bar */}
+          <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <StatusDot color={T.green} size={5} />
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Cache hits: <strong style={{color:T.green}}>{feedDiag.totals.hits}</strong></span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <StatusDot color={T.blue} size={5} />
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Fetches: <strong style={{color:T.blue}}>{feedDiag.totals.misses}</strong></span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <StatusDot color={T.danger} size={5} />
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Errors: <strong style={{color:feedDiag.totals.errors>0?T.danger:T.text3}}>{feedDiag.totals.errors}</strong></span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Avg latency: <strong style={{color:T.text1}}>{feedDiag.totals.avgLatency.toFixed(0)}ms</strong></span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Rate: <strong style={{color:feedDiag.rateWindow.recent>=feedDiag.rateWindow.max-1?T.warning:T.text1}}>{feedDiag.rateWindow.recent}/{feedDiag.rateWindow.max}</strong>/10s</span>
+            </div>
+            {feedDiag.inflight > 0 && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.blue }}><StatusDot color={T.blue} pulse size={5} /> {feedDiag.inflight} inflight</span>}
+            {feedDiag.queued > 0 && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.yellow }}>⏳ {feedDiag.queued} queued</span>}
+          </div>
+          {/* Per-feed status */}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:4 }}>
+            {feedDiag.feeds.map(f => (
+              <div key={f.url} style={{
+                display:"flex", alignItems:"center", gap:8, padding:"5px 8px",
+                background:T.bg2, borderRadius:T.rSm, border:`1px solid ${T.border0}`,
+                borderLeft:`3px solid ${f.breaker==="open"?T.danger:f.breaker==="half-open"?T.warning:f.cached?T.green:T.border1}`,
+              }}>
+                <StatusDot color={f.breaker==="open"?T.danger:f.breaker==="half-open"?T.warning:f.errors>0?T.yellow:T.green} size={5} />
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</span>
+                {f.cached && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"1px 4px", borderRadius:T.rSm, background:T.greenDim, color:T.green }}>cached {Math.round(f.cacheAge/1000)}s</span>}
+                {f.breaker==="open" && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"1px 4px", borderRadius:T.rSm, background:T.dangerDim, color:T.danger }}>OPEN</span>}
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{f.lastLatency.toFixed(0)}ms</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{(f.bytesTotal/1024).toFixed(0)}KB</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Cache indicator on loaded feed */}
+      {feedMeta && feedMeta.fromCache && (
+        <div style={{ margin:"8px 0", padding:"6px 10px", background:T.greenDim, border:`1px solid ${T.green}33`,
+          borderRadius:T.rSm, fontFamily:T.mono, fontSize:T.fs.xs, color:T.green, display:"inline-flex", alignItems:"center", gap:6 }}>
+          <StatusDot color={T.green} size={5} /> Served from cache ({Math.round(feedMeta.age/1000)}s old · TTL {FeedManager.config.DEFAULT_TTL/1000}s)
+        </div>
+      )}
+
       {/* Loading / Error */}
       {loading && (
-        <div style={{ textAlign:"center", padding:"24px 0", fontFamily:T.mono, fontSize:"0.78rem", color:T.blue }}>
+        <div style={{ textAlign:"center", padding:"24px 0", fontFamily:T.mono, fontSize:T.fs.sm, color:T.blue }}>
           <StatusDot color={T.blue} pulse size={8} /> Fetching data...
         </div>
       )}
@@ -3157,20 +3399,21 @@ function CausalTab() {
     return () => clearTimeout(timer);
   }, [autoPlay, currentStep, steps]);
 
-  // Load live feed pair for causal analysis
+  // Load live feed pair for causal analysis — via FeedManager
   const loadLivePair = useCallback(async (feedA, feedB) => {
     setLoadingFeed(true);
     try {
-      const [respA, respB] = await Promise.all([fetch(feedA.url), fetch(feedB.url)]);
-      const [jsonA, jsonB] = await Promise.all([respA.json(), respB.json()]);
-      const parsedA = feedA.parse(jsonA), parsedB = feedB.parse(jsonB);
-      const vA = parsedA.values.filter(v => v != null && isFinite(v));
-      const vB = parsedB.values.filter(v => v != null && isFinite(v));
-      const n = Math.min(vA.length, vB.length, 800);
-      setSignals({ x: vA.slice(0, n), y: vB.slice(0, n) });
-      setLivePair({ nameA: parsedA.name || feedA.name, nameB: parsedB.name || feedB.name });
+      const [resultA, resultB] = await Promise.all([
+        FeedManager.fetch(feedA),
+        FeedManager.fetch(feedB),
+      ]);
+      const n = Math.min(resultA.values.length, resultB.values.length, 800);
+      setSignals({ x: resultA.values.slice(0, n), y: resultB.values.slice(0, n) });
+      setLivePair({ nameA: resultA.name, nameB: resultB.name });
       setSteps(null); setResults(null); setCurrentStep(-1);
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error("Feed pair load failed:", e.message);
+    }
     setLoadingFeed(false);
   }, []);
 
