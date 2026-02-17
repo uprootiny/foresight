@@ -1634,8 +1634,8 @@ function hsicTest(x, y) {
   let trKL = 0, totalK = 0, totalL = 0;
   const Kcol = new Array(n).fill(0), Lcol = new Array(n).fill(0);
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-    const kij = Math.exp(-(xs[i] - xs[j]) ** 2 / s2);
-    const lij = Math.exp(-(ys[i] - ys[j]) ** 2 / s2);
+    const kij = Math.exp(-((xs[i] - xs[j]) ** 2) / s2);
+    const lij = Math.exp(-((ys[i] - ys[j]) ** 2) / s2);
     trKL += kij * lij; totalK += kij; totalL += lij; Kcol[j] += kij; Lcol[j] += lij;
   }
   let sumKL1 = 0;
@@ -1771,7 +1771,7 @@ function MetricCard({ label, value, unit, delta, deltaDir, color }) {
   return (
     <div style={{ background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:16 }}>
       <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.14em", color:T.text3, marginBottom:6 }}>{label}</div>
-      <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.6rem", color:color||T.text0, lineHeight:1 }}>
+      <div style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.xxl, color:color||T.text0, lineHeight:1 }}>
         {value}{unit && <span style={{ fontSize:T.fs.sm, fontWeight:400 }}>{unit}</span>}
       </div>
       {delta && <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, marginTop:6, color: deltaDir==="up"?T.green:deltaDir==="down"?T.crimson:T.text3 }}>{delta}</div>}
@@ -1779,16 +1779,49 @@ function MetricCard({ label, value, unit, delta, deltaDir, color }) {
   );
 }
 
-function Section({ title, count, color, children, style:sx }) {
+function Section({ title, count, color, children, style:sx, collapsible, defaultOpen=true, extra }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const isCollapsible = collapsible !== undefined ? collapsible : false;
   return (
     <div style={{ background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden", ...sx }}>
       {color && <div style={{ height:3, width:"100%", background:color }} />}
       <div style={{ padding:"14px 16px" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${T.border0}` }}>
-          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.lg, color:T.text0 }}>{title}</span>
-          {count !== undefined && <Badge color={color||T.teal}>{count}</Badge>}
+        <div onClick={isCollapsible ? () => setOpen(o => !o) : undefined}
+          style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom: open ? 14 : 0,
+            paddingBottom: open ? 10 : 0, borderBottom: open ? `1px solid ${T.border0}` : "none",
+            cursor: isCollapsible ? "pointer" : "default", userSelect: isCollapsible ? "none" : "auto" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            {isCollapsible && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3,
+              transform: open ? "rotate(90deg)" : "rotate(0)", transition:"transform 0.2s", display:"inline-block" }}>▸</span>}
+            <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.lg, color:T.text0 }}>{title}</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            {extra}
+            {count !== undefined && <Badge color={color||T.teal}>{count}</Badge>}
+          </div>
         </div>
-        {children}
+        {open && children}
+      </div>
+    </div>
+  );
+}
+
+function Collapsible({ expanded, onToggle, accentColor, accentStyle="top", maxH=600, label, children, header }) {
+  return (
+    <div aria-expanded={expanded} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden",
+      ...(accentStyle==="left" && { borderLeft:`3px solid ${accentColor}` }),
+      transition:"border-color 150ms" }}>
+      {accentStyle === "top" && accentColor && <div style={{ height:2, background:accentColor }} />}
+      <div onClick={onToggle} role="button" tabIndex={0}
+        aria-label={label ? `${label} — ${expanded?"collapse":"expand"}` : (expanded?"Collapse":"Expand")}
+        onKeyDown={e => { if(e.key==="Enter"||e.key===" "){e.preventDefault();onToggle();} }}
+        style={{ padding:"10px 12px", cursor:"pointer" }}>
+        {header}
+      </div>
+      <div style={{ maxHeight:expanded?maxH:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
+        <div style={{ padding:"0 12px 12px", borderTop:`1px solid ${T.border0}` }}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -1804,6 +1837,29 @@ function Segmented({ options, active, onChange }) {
           background: active===o.key ? T.bg4 : "transparent",
           color: active===o.key ? T.text0 : T.text3,
         }}>{o.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function FeedGrid({ feeds, activeName, onSelect, accentColor }) {
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:6 }}>
+      {feeds.map(f => (
+        <button key={f.id} onClick={() => onSelect(f)} style={{
+          background: activeName === f.name ? T.bg4 : T.bg2, border:`1px solid ${activeName === f.name ? accentColor : T.border0}`,
+          borderRadius:T.rSm, padding:"8px 10px", cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${accentColor}`,
+          display:"block", width:"100%",
+        }}>
+          <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600 }}>{f.name}</div>
+          <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
+          <div style={{ display:"flex", gap:4, marginTop:4 }}>
+            {f.category && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
+              background:T.bg4, color:T.text3 }}>{f.category}</span>}
+            <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
+              background:T.tealDim, color:T.teal }}>{f.archetype}</span>
+          </div>
+        </button>
       ))}
     </div>
   );
@@ -2042,9 +2098,11 @@ function PrincipleCard({ p, expanded, onToggle }) {
   const catColors = { structural:T.blue, causal:T.orange, statistical:T.purple, evaluation:T.crimson, design:T.green };
   const cc = catColors[p.category] || T.teal;
   return (
-    <div style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden" }}>
+    <div aria-expanded={expanded} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden" }}>
       <div style={{ height:2, background:cc }} />
-      <div onClick={onToggle} style={{ padding:"12px 14px", cursor:"pointer" }}>
+      <div onClick={onToggle} role="button" tabIndex={0} aria-label={`Principle ${p.id}: ${p.name} — ${expanded?"collapse":"expand"}`}
+        onKeyDown={e => { if(e.key==="Enter"||e.key===" "){e.preventDefault();onToggle();} }}
+        style={{ padding:"12px 14px", cursor:"pointer" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <Badge color={cc}>{p.id}</Badge>
           <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{p.name}</span>
@@ -2214,7 +2272,7 @@ function ComposerTab() {
               <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, paddingTop:10, borderTop:`1px solid ${T.border0}` }}>
                 <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Overall Score</span>
                 <div style={{ flex:1 }}><ProgressBar value={overallScore} color={scoreColor} thick /></div>
-                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.1rem", color:scoreColor }}>{(overallScore*100).toFixed(0)}%</span>
+                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.lg, color:scoreColor }}>{(overallScore*100).toFixed(0)}%</span>
               </div>
             )}
             <div style={{ textAlign:"right", marginTop:8 }}>
@@ -2227,7 +2285,7 @@ function ComposerTab() {
 
       {/* Pair checks detail */}
       {pairChecks.length > 0 && (
-        <Section title="Composition Checks" count={pairChecks.reduce((s,p) => s + p.checks.filter(c=>!c.pass).length, 0)} color={T.orange} style={{ marginTop:12 }}>
+        <Section title="Composition Checks" count={pairChecks.reduce((s,p) => s + p.checks.filter(c=>!c.pass).length, 0)} color={T.orange} style={{ marginTop:12 }} collapsible>
           {pairChecks.map((pair, idx) => (
             <div key={idx} style={{ marginBottom:12, paddingBottom:12, borderBottom: idx < pairChecks.length-1 ? `1px solid ${T.border0}` : "none" }}>
               <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, marginBottom:8 }}>
@@ -2261,23 +2319,68 @@ function ComposerTab() {
           {(() => {
             const synData = generateSeasonal(200, 7, 10, 0.05, 2);
             let current = synData;
-            const stages = [{ label:"Input: Weekly Seasonal", data:current, color:T.text2 }];
+            const computeStats = (d) => {
+              if (!d || d.length < 2) return { mean:0, std:0, min:0, max:0 };
+              const m = d.reduce((s,v)=>s+v,0)/d.length;
+              const v = Math.sqrt(d.reduce((s,x)=>s+(x-m)*(x-m),0)/d.length);
+              return { mean:m, std:v, min:Math.min(...d), max:Math.max(...d) };
+            };
+            const inputStats = computeStats(current);
+            const stages = [{ label:"Input: Weekly Seasonal", data:current, color:T.text2, role:"source", stats:inputStats }];
             for (const id of pipeline) {
               const tech = TECHNIQUES.find(t => t.id === id);
               if (!tech) continue;
               const result = simulateStep(id, current);
-              stages.push({ label:`${tech.name}: ${result.label}`, data:result.values, color:familyColor(tech.family) });
+              const stats = computeStats(result.values);
+              const prev = stages[stages.length-1].stats;
+              const delta = prev.std > 0 ? ((stats.std - prev.std) / prev.std * 100) : 0;
+              stages.push({ label:`${tech.name}: ${result.label}`, data:result.values, color:familyColor(tech.family),
+                role:tech.pipelineRole, stats, delta });
               current = result.values;
             }
             return (
-              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:4 }}>
-                  Simulated on synthetic weekly seasonal signal (n=200)
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:2 }}>
+                  Simulated on synthetic weekly seasonal signal (n=200) · {stages.length} stages
                 </div>
                 {stages.map((s,i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"4px 8px", background:T.bg2, borderRadius:T.rSm, borderLeft:`3px solid ${s.color}` }}>
-                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:s.color, minWidth:180, flexShrink:0 }}>{s.label}</span>
-                    <Sparkline data={s.data.slice(0, 200)} width={400} height={28} color={s.color} showRange />
+                  <div key={i} style={{ background:T.bg2, borderRadius:T.rSm, borderLeft:`3px solid ${s.color}`, overflow:"hidden" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 10px" }}>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, minWidth:36 }}>
+                        {i === 0 ? "IN" : `S${i}`}
+                      </span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:s.color, fontWeight:600, flex:1 }}>{s.label}</span>
+                      {s.role && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
+                        background:T.bg4, color:T.text3 }}>{s.role}</span>}
+                      {s.delta !== undefined && i > 0 && (
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs,
+                          color: Math.abs(s.delta) < 5 ? T.text3 : s.delta < 0 ? T.green : T.yellow }}>
+                          {s.delta > 0 ? "+" : ""}{s.delta.toFixed(0)}% var
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ padding:"0 10px 6px", display:"flex", alignItems:"center", gap:10 }}>
+                      <Sparkline data={s.data.slice(0, 200)} width={400} height={30} color={s.color} showRange interactive />
+                      <div style={{ display:"flex", gap:12, flexShrink:0 }}>
+                        <div style={{ textAlign:"center" }}>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>mean</div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>{s.stats.mean.toFixed(2)}</div>
+                        </div>
+                        <div style={{ textAlign:"center" }}>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>std</div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>{s.stats.std.toFixed(2)}</div>
+                        </div>
+                        <div style={{ textAlign:"center" }}>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>range</div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>
+                            {(s.stats.max - s.stats.min).toFixed(1)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {i < stages.length - 1 && (
+                      <div style={{ height:1, background:`linear-gradient(to right, ${s.color}33, transparent)` }} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -2287,7 +2390,7 @@ function ComposerTab() {
       )}
 
       {/* Canonical Pipelines */}
-      <Section title="Canonical Pipelines" count={CANONICAL_PIPELINES.length} color={T.blue} style={{ marginTop:12 }}>
+      <Section title="Canonical Pipelines" count={CANONICAL_PIPELINES.length} color={T.blue} style={{ marginTop:12 }} collapsible>
         <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:10 }}>
           Click a pipeline to load it into the composer
         </div>
@@ -2439,7 +2542,7 @@ function MatrixTab() {
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                 <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Score</span>
                 <div style={{ flex:1 }}><ProgressBar value={hoverData.score} color={hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson} thick /></div>
-                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1rem", color:hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson }}>
+                <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson }}>
                   {(hoverData.score*100).toFixed(0)}%
                 </span>
               </div>
@@ -2548,7 +2651,7 @@ function CondensedLogsTab() {
       </Section>
 
       {/* Operators */}
-      <Section title="Operator Stack" count={OPERATORS.length} color={T.orange} style={{ marginTop:12 }}>
+      <Section title="Operator Stack" count={OPERATORS.length} color={T.orange} style={{ marginTop:12 }} collapsible>
         <div style={{ marginBottom:12 }}>
           <Segmented options={[{key:"all",label:`All (${OPERATORS.length})`},...OP_CATEGORIES.map(c => ({key:c.id,label:`${c.name} (${OPERATORS.filter(o=>o.category===c.id).length})`}))]}
             active={opCat} onChange={setOpCat} />
@@ -2594,22 +2697,21 @@ function CondensedLogsTab() {
       </Section>
 
       {/* Archetypes */}
-      <Section title="Stream Archetypes" count={ARCHETYPES.length} color={T.teal} style={{ marginTop:12 }}>
+      <Section title="Stream Archetypes" count={ARCHETYPES.length} color={T.teal} style={{ marginTop:12 }} collapsible>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {ARCHETYPES.map(arch => {
             const isOpen = expandedArch.has(arch.id);
             return (
-              <div key={arch.id} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden" }}>
-                <div onClick={() => toggleArch(arch.id)} style={{ padding:"10px 12px", cursor:"pointer" }}>
+              <Collapsible key={arch.id} expanded={isOpen} onToggle={() => toggleArch(arch.id)}
+                accentColor={T.teal} label={arch.name} maxH={400}
+                header={<React.Fragment>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <StatusDot color={T.teal} size={7} />
                     <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{arch.name}</span>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
                   </div>
                   <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginTop:4, marginLeft:15 }}>{arch.description}</div>
-                </div>
-                <div style={{ maxHeight:isOpen?400:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
-                  <div style={{ padding:"0 12px 12px", borderTop:`1px solid ${T.border0}` }}>
+                </React.Fragment>}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:10 }}>
                       <div>
                         <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Example Streams</div>
@@ -2643,9 +2745,7 @@ function CondensedLogsTab() {
                         ))}
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+              </Collapsible>
             );
           })}
         </div>
@@ -2730,24 +2830,7 @@ function ObservatoryTab() {
             background:T.bg3, border:`1px solid ${T.border1}`, color:T.text2,
           }}>⚡ Prefetch All</button>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:6 }}>
-          {filteredFeeds.map(f => (
-            <button key={f.id} onClick={() => loadLiveFeed(f)} style={{
-              background: feedName === f.name ? T.bg4 : T.bg2, border:`1px solid ${feedName === f.name ? T.blue : T.border0}`,
-              borderRadius:T.rSm, padding:"8px 10px", cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${T.blue}`,
-              display:"block", width:"100%",
-            }}>
-              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600 }}>{f.name}</div>
-              <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
-              <div style={{ display:"flex", gap:4, marginTop:4 }}>
-                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
-                  background:T.bg4, color:T.text3 }}>{f.category}</span>
-                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
-                  background:T.tealDim, color:T.teal }}>{f.archetype}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        <FeedGrid feeds={filteredFeeds} activeName={feedName} onSelect={loadLiveFeed} accentColor={T.blue} />
       </Section>
 
       {/* Synthetic Generators */}
@@ -2755,25 +2838,12 @@ function ObservatoryTab() {
         <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:8 }}>
           Generate controlled time series to test technique recommendations
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:6 }}>
-          {SYNTHETIC_FEEDS.map(f => (
-            <button key={f.id} onClick={() => loadSynthetic(f)} style={{
-              background: feedName === f.name ? T.bg4 : T.bg2, border:`1px solid ${feedName === f.name ? T.green : T.border0}`,
-              borderRadius:T.rSm, padding:"8px 10px", cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${T.green}`,
-              display:"block", width:"100%",
-            }}>
-              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600 }}>{f.name}</div>
-              <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
-              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
-                background:T.tealDim, color:T.teal, marginTop:4, display:"inline-block" }}>{f.archetype}</span>
-            </button>
-          ))}
-        </div>
+        <FeedGrid feeds={SYNTHETIC_FEEDS} activeName={feedName} onSelect={loadSynthetic} accentColor={T.green} />
       </Section>
 
       {/* Feed Manager Diagnostics */}
       {feedDiag && feedDiag.feeds.length > 0 && (
-        <Section title="Feed Diagnostics" count={feedDiag.feeds.length} color={T.text3} style={{ marginTop:12 }}>
+        <Section title="Feed Diagnostics" count={feedDiag.feeds.length} color={T.text3} style={{ marginTop:12 }} collapsible defaultOpen={false}>
           {/* Summary bar */}
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div style={{ display:"flex", alignItems:"center", gap:4 }}>
@@ -3125,18 +3195,18 @@ function GraphTab() {
       {/* Controls */}
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
         <button onClick={() => setShowConflicts(!showConflicts)} style={{
-          fontFamily: T.mono, fontSize: "0.62rem", padding: "4px 10px", borderRadius: T.rSm,
+          fontFamily: T.mono, fontSize: T.fs.xs, padding: "4px 10px", borderRadius: T.rSm,
           border: `1px solid ${showConflicts ? T.crimson : T.border1}`, background: showConflicts ? T.crimsonDim : T.bg3,
           color: showConflicts ? T.crimson : T.text2, cursor: "pointer"
         }}>{showConflicts ? "Hide" : "Show"} Conflicts ({conflictEdges.length})</button>
         <button onClick={() => { setSelected(null); setShowCanonical(null); setActivePath(null); setPercStages(null); }} style={{
-          fontFamily: T.mono, fontSize: "0.62rem", padding: "4px 10px", borderRadius: T.rSm,
+          fontFamily: T.mono, fontSize: T.fs.xs, padding: "4px 10px", borderRadius: T.rSm,
           border: `1px solid ${T.border1}`, background: T.bg3, color: T.text2, cursor: "pointer"
         }}>Reset</button>
-        <span style={{ fontFamily: T.mono, fontSize: "0.58rem", color: T.text3, marginLeft: 4 }}>
+        <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3, marginLeft: 4 }}>
           {TECHNIQUES.length} nodes · {synergyEdges.length} synergies · {conflictEdges.length} conflicts
         </span>
-        {selected && <span style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.orange }}>
+        {selected && <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.orange }}>
           Selected: {(TECHNIQUES.find(t => t.id === selected) || {}).name} · {paths.length} paths found
         </span>}
       </div>
@@ -3257,7 +3327,48 @@ function GraphTab() {
               </g>
             );
           })}
+
+          {/* Legend */}
+          <g transform={`translate(${GW - 160},${GH - 120})`}>
+            <rect x={-8} y={-14} width={165} height={118} rx={4} fill={T.bg0} fillOpacity={0.9} stroke={T.border0} strokeWidth={0.5} />
+            <text x={0} y={0} style={{ fontFamily:T.mono, fontSize:7, fill:T.text3, letterSpacing:"0.1em" }}>FAMILIES</text>
+            {FAMILIES.map((f, i) => (
+              <g key={f.id} transform={`translate(0,${12 + i * 11})`}>
+                <circle cx={5} cy={0} r={4} fill={`${f.color}22`} stroke={f.color} strokeWidth={1} />
+                <text x={14} y={3} style={{ fontFamily:T.mono, fontSize:6.5, fill:f.color }}>{f.name}</text>
+              </g>
+            ))}
+          </g>
         </svg>
+
+        {/* Node tooltip */}
+        {hoveredNode && !hoveredEdge && (() => {
+          const ht = TECHNIQUES.find(t => t.id === hoveredNode);
+          if (!ht) return null;
+          const fc = familyColor(ht.family);
+          return (
+            <div style={{
+              position: "absolute", top: 10, right: 10, maxWidth: 280, padding: "8px 12px",
+              background: T.bg3, border: `1px solid ${fc}33`, borderRadius: T.rMd, zIndex: 10,
+            }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                <StatusDot color={fc} size={6} />
+                <span style={{ fontFamily: T.display, fontWeight:700, fontSize: T.fs.md, color: T.text0 }}>{ht.name}</span>
+                <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
+                  background:`${fc}22`, color:fc }}>{familyName(ht.family)}</span>
+              </div>
+              <div style={{ fontFamily: T.body, fontSize: T.fs.xs, color: T.text2, marginBottom:4 }}>{ht.desc}</div>
+              <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
+                  background:T.bg4, color:T.text3 }}>{ht.pipelineRole}</span>
+                {ht.timeScales.slice(0,3).map(s => (
+                  <span key={s} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
+                    background:T.bg4, color:T.text3 }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Edge tooltip */}
         {hoveredEdge && (
@@ -3266,7 +3377,7 @@ function GraphTab() {
             background: T.bg3, border: `1px solid ${hoveredEdge.violation ? T.crimson : T.green}33`,
             borderRadius: T.rMd, zIndex: 10,
           }}>
-            <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.text0, marginBottom: 4 }}>
+            <div style={{ fontFamily: T.mono, fontSize: T.fs.sm, color: T.text0, marginBottom: 4 }}>
               <span style={{ color: familyColor((TECHNIQUES.find(t => t.id === hoveredEdge.from) || {}).family) }}>
                 {(TECHNIQUES.find(t => t.id === hoveredEdge.from) || {}).name}
               </span>
@@ -3275,9 +3386,9 @@ function GraphTab() {
                 {(TECHNIQUES.find(t => t.id === hoveredEdge.to) || {}).name}
               </span>
             </div>
-            <div style={{ fontFamily: T.body, fontSize: "0.65rem", color: T.text2 }}>{hoveredEdge.reason}</div>
-            {hoveredEdge.principles && <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.green, marginTop: 4 }}>Principles: {hoveredEdge.principles.join(", ")}</div>}
-            {hoveredEdge.violation && <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.crimson, marginTop: 4 }}>Violates principle {hoveredEdge.violation} ({hoveredEdge.severity})</div>}
+            <div style={{ fontFamily: T.body, fontSize: T.fs.xs, color: T.text2 }}>{hoveredEdge.reason}</div>
+            {hoveredEdge.principles && <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.green, marginTop: 4 }}>Principles: {hoveredEdge.principles.join(", ")}</div>}
+            {hoveredEdge.violation && <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.crimson, marginTop: 4 }}>Violates principle {hoveredEdge.violation} ({hoveredEdge.severity})</div>}
           </div>
         )}
       </div>
@@ -3286,14 +3397,14 @@ function GraphTab() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
         {/* Discovered paths */}
         <Section title={selected ? `Paths from ${(TECHNIQUES.find(t => t.id === selected) || {}).name}` : "Discovered Paths"} count={paths.length} color={T.green}>
-          {!selected && <div style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text3, padding: "12px 0" }}>Click a technique node to discover composition paths</div>}
+          {!selected && <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3, padding: "12px 0" }}>Click a technique node to discover composition paths</div>}
           {paths.length > 0 && (
             <div style={{ marginBottom: 8 }}>
-              <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3, marginBottom: 6 }}>Feed for percolation:</div>
+              <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3, marginBottom: 6 }}>Feed for percolation:</div>
               <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                 {SYNTHETIC_FEEDS.map(f => (
                   <button key={f.id} onClick={() => setPercFeedId(f.id)} style={{
-                    fontFamily: T.mono, fontSize: "0.55rem", padding: "2px 6px", borderRadius: T.rSm,
+                    fontFamily: T.mono, fontSize: T.fs.xs, padding: "2px 6px", borderRadius: T.rSm,
                     background: percFeedId === f.id ? T.greenDim : T.bg3, border: `1px solid ${percFeedId === f.id ? T.green : T.border0}`,
                     color: percFeedId === f.id ? T.green : T.text3, cursor: "pointer"
                   }}>{f.name}</button>
@@ -3314,21 +3425,21 @@ function GraphTab() {
                       const t = TECHNIQUES.find(x => x.id === sid);
                       return (
                         <React.Fragment key={sid}>
-                          {i > 0 && <span style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3 }}>→</span>}
-                          <span style={{ fontFamily: T.mono, fontSize: "0.58rem", color: familyColor(t?.family), fontWeight: 500 }}>
+                          {i > 0 && <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3 }}>→</span>}
+                          <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: familyColor(t?.family), fontWeight: 500 }}>
                             {t?.name || sid}
                           </span>
                         </React.Fragment>
                       );
                     })}
-                    <span style={{ marginLeft: "auto", fontFamily: T.mono, fontSize: "0.55rem",
+                    <span style={{ marginLeft: "auto", fontFamily: T.mono, fontSize: T.fs.xs,
                       color: p.score > 0.8 ? T.green : p.score > 0.5 ? T.yellow : T.crimson }}>
                       {(p.score * 100).toFixed(0)}%
                     </span>
                   </div>
                   {isActive && (
                     <button onClick={(e) => { e.stopPropagation(); startPercolation(p.steps); }} style={{
-                      fontFamily: T.mono, fontSize: "0.58rem", padding: "3px 8px", borderRadius: T.rSm, marginTop: 4,
+                      fontFamily: T.mono, fontSize: T.fs.xs, padding: "3px 8px", borderRadius: T.rSm, marginTop: 4,
                       background: T.greenDim, border: `1px solid ${T.green}44`, color: T.green, cursor: "pointer",
                     }}>
                       {percRunning ? `Percolating... step ${percStep}/${percStages?.length - 1 || "?"}` : "▶ Percolate Feed"}
@@ -3358,17 +3469,17 @@ function GraphTab() {
                       opacity: isLatest ? 1 : 0.7, transition: "opacity 0.5s",
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3 }}>Step {i}</span>
-                        <span style={{ fontFamily: T.mono, fontSize: "0.68rem", color: fc, fontWeight: 600 }}>
+                        <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3 }}>Step {i}</span>
+                        <span style={{ fontFamily: T.mono, fontSize: T.fs.sm, color: fc, fontWeight: 600 }}>
                           {tech ? tech.name : "Input"}
                         </span>
-                        <span style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text2, marginLeft: "auto" }}>{stage.label}</span>
+                        <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text2, marginLeft: "auto" }}>{stage.label}</span>
                       </div>
                       {vals && vals.length > 3 && typeof vals[0] === 'number' && (
                         <Sparkline data={vals.slice(0, 300)} width={320} height={28} color={fc} showRange filled />
                       )}
                       {stage.band && (
-                        <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.teal, marginTop: 2 }}>
+                        <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.teal, marginTop: 2 }}>
                           Band: ±{stage.band.toFixed(3)}
                         </div>
                       )}
@@ -3381,7 +3492,7 @@ function GraphTab() {
 
           {/* Canonical pipelines overlay selector */}
           <Section title="Canonical Pipelines" count={CANONICAL_PIPELINES.length} color={T.blue}>
-            <div style={{ fontFamily: T.mono, fontSize: "0.58rem", color: T.text3, marginBottom: 8 }}>Click to highlight on graph</div>
+            <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3, marginBottom: 8 }}>Click to highlight on graph</div>
             <div style={{ maxHeight: percStages ? 150 : 320, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
               {CANONICAL_PIPELINES.map(cp => (
                 <button key={cp.id}
@@ -3390,12 +3501,12 @@ function GraphTab() {
                     background: showCanonical === cp.id ? T.bg4 : T.bg2, border: `1px solid ${showCanonical === cp.id ? T.blue : T.border0}`,
                     borderRadius: T.rSm, padding: "5px 8px", cursor: "pointer", textAlign: "left", display: "block", width: "100%",
                   }}>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text0, fontWeight: 600, marginBottom: 2 }}>{cp.name}</div>
+                  <div style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text0, fontWeight: 600, marginBottom: 2 }}>{cp.name}</div>
                   <div style={{ display: "flex", gap: 3, alignItems: "center", flexWrap: "wrap" }}>
                     {cp.steps.map((sid, i) => (
                       <React.Fragment key={sid}>
-                        {i > 0 && <span style={{ fontFamily: T.mono, fontSize: "0.5rem", color: T.text3 }}>→</span>}
-                        <span style={{ fontFamily: T.mono, fontSize: "0.55rem",
+                        {i > 0 && <span style={{ fontFamily: T.mono, fontSize: T.fs.xs, color: T.text3 }}>→</span>}
+                        <span style={{ fontFamily: T.mono, fontSize: T.fs.xs,
                           color: familyColor((TECHNIQUES.find(x => x.id === sid) || {}).family) }}>
                           {(TECHNIQUES.find(x => x.id === sid) || {}).name || sid}
                         </span>
@@ -3810,8 +3921,9 @@ function CausalTab() {
           {HILBERT_CONCEPTS.map(hc => {
             const isOpen = expandedConcept === hc.id;
             return (
-              <div key={hc.id} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden", borderLeft:`3px solid ${hc.color}` }}>
-                <div onClick={() => setExpandedConcept(isOpen ? null : hc.id)} style={{ padding:"8px 10px", cursor:"pointer" }}>
+              <Collapsible key={hc.id} expanded={isOpen} onToggle={() => setExpandedConcept(isOpen ? null : hc.id)}
+                accentColor={hc.color} accentStyle="left" label={hc.name} maxH={400}
+                header={<React.Fragment>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:600, color:hc.color }}>{hc.symbol}</span>
                     <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{hc.name}</span>
@@ -3819,32 +3931,28 @@ function CausalTab() {
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)", transition:"transform 0.2s" }}>▸</span>
                   </div>
                   <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:4 }}>{hc.description}</div>
+                </React.Fragment>}>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"8px 0 6px" }}>
+                  <span style={{color:T.text3}}>Hilbert: </span>{hc.hilbertMeaning}
                 </div>
-                <div style={{ maxHeight:isOpen?400:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
-                  <div style={{ padding:"0 10px 10px", borderTop:`1px solid ${T.border0}` }}>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"8px 0 6px" }}>
-                      <span style={{color:T.text3}}>Hilbert: </span>{hc.hilbertMeaning}
-                    </div>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, paddingBottom:8, borderBottom:`1px dashed ${T.border0}` }}>
-                      <span style={{color:T.text3}}>Causal role: </span>{hc.causalRole}
-                    </div>
-                    <div style={{ marginTop:8 }}>
-                      <div style={labelS}>Techniques using this structure</div>
-                      <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
-                        {hc.techniques.map(tid => {
-                          const t=TECHNIQUES.find(x=>x.id===tid);
-                          return t ? (
-                            <span key={tid} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
-                              background:`${familyColor(t.family)}15`, color:familyColor(t.family), border:`1px solid ${familyColor(t.family)}28` }}>
-                              {t.name}
-                            </span>
-                          ) : null;
-                        })}
-                      </div>
-                    </div>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, paddingBottom:8, borderBottom:`1px dashed ${T.border0}` }}>
+                  <span style={{color:T.text3}}>Causal role: </span>{hc.causalRole}
+                </div>
+                <div style={{ marginTop:8 }}>
+                  <div style={labelS}>Techniques using this structure</div>
+                  <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
+                    {hc.techniques.map(tid => {
+                      const t=TECHNIQUES.find(x=>x.id===tid);
+                      return t ? (
+                        <span key={tid} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
+                          background:`${familyColor(t.family)}15`, color:familyColor(t.family), border:`1px solid ${familyColor(t.family)}28` }}>
+                          {t.name}
+                        </span>
+                      ) : null;
+                    })}
                   </div>
                 </div>
-              </div>
+              </Collapsible>
             );
           })}
         </div>
@@ -4061,7 +4169,7 @@ function CausalTab() {
                             <div style={{ flex:1 }}>
                               <ProgressBar value={Math.min(1,Math.abs(step.data.reduction))} color={step.data.reduction>0.05?T.green:T.text3} thick />
                             </div>
-                            <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.3rem", color:step.data.reduction>0.05?T.green:T.text3 }}>
+                            <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.xl, color:step.data.reduction>0.05?T.green:T.text3 }}>
                               {(step.data.reduction*100).toFixed(1)}%
                             </span>
                           </div>
@@ -4091,7 +4199,7 @@ function CausalTab() {
                       {step.id === 8 && step.data && (
                         <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:12, padding:"8px 12px", background:T.bg2, borderRadius:T.rSm }}>
                           <div>
-                            <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.4rem", color:T.teal, lineHeight:1 }}>
+                            <div style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.xl, color:T.teal, lineHeight:1 }}>
                               {step.data.hXY.hsic.toFixed(6)}
                             </div>
                             <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>HSIC(X,Y)</div>
@@ -4117,7 +4225,7 @@ function CausalTab() {
                       )}
                       {step.id === 10 && step.data && (
                         <div style={{ marginTop:8, padding:"10px 14px", background:(step.data.linFwd||step.data.kerFwd)?T.greenDim:T.bg2, borderRadius:T.rMd, border:`1px solid ${(step.data.linFwd||step.data.kerFwd)?T.green:T.border0}` }}>
-                          <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1rem", color:(step.data.linFwd||step.data.kerFwd)?T.green:T.text3, marginBottom:4 }}>
+                          <div style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:(step.data.linFwd||step.data.kerFwd)?T.green:T.text3, marginBottom:4 }}>
                             {step.data.verdict}
                           </div>
                           <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>
@@ -4135,7 +4243,7 @@ function CausalTab() {
       </Section>
 
       {/* ═══ BENCHMARK SUITE ═══ */}
-      <Section title="Causal Method Benchmarks" color={T.yellow} style={{ marginTop:12 }}>
+      <Section title="Causal Method Benchmarks" color={T.yellow} style={{ marginTop:12 }} collapsible>
         <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginBottom:12, lineHeight:1.6 }}>
           Run a battery of experiments across 4 signal types × 4 noise levels × 3 sample sizes.
           Compare <strong style={{color:T.blue}}>Linear Granger</strong>, <strong style={{color:T.orange}}>Kernel Granger</strong>, and <strong style={{color:T.teal}}>HSIC</strong> detection rates and timing.
@@ -4241,7 +4349,7 @@ function CausalTab() {
       </Section>
 
       {/* ═══ Technique ↔ Hilbert Mapping ═══ */}
-      <Section title="Technique → Hilbert Mapping" count={Object.keys(HILBERT_MAPPING).length} color={T.teal} style={{ marginTop:12 }}>
+      <Section title="Technique → Hilbert Mapping" count={Object.keys(HILBERT_MAPPING).length} color={T.teal} style={{ marginTop:12 }} collapsible>
         <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:8 }}>
           Every forecasting technique secretly operates via a Hilbert space mechanism
         </div>
@@ -4312,7 +4420,7 @@ function App() {
 
         {/* HEADER */}
         <header style={{ marginBottom:24 }}>
-          <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.8rem", color:T.text0, lineHeight:1.1, marginBottom:4 }}>
+          <div style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.xxl, color:T.text0, lineHeight:1.1, marginBottom:4 }}>
             Foresight Compendium
           </div>
           <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginBottom:16 }}>
