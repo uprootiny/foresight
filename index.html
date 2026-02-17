@@ -18,22 +18,34 @@ const { useState, useEffect, useCallback, useMemo, useRef } = React;
 // ═══════════════════════════════════════════════════════════════
 
 const T = {
-  bg0:"#08080c", bg1:"#0e0e14", bg2:"#141420", bg3:"#1a1a28", bg4:"#222232",
-  border0:"#1e1e2e", border1:"#2a2a3c", border2:"#36364a",
-  text0:"#eae9f0", text1:"#c4c3ce", text2:"#8a899a", text3:"#5a596a",
-  blue:"#4a8fe7", blueDim:"rgba(74,143,231,0.15)", blueMid:"rgba(74,143,231,0.35)",
-  red:"#e84a5a", redDim:"rgba(232,74,90,0.15)", redMid:"rgba(232,74,90,0.35)",
-  purple:"#9b6dff", purpleDim:"rgba(155,109,255,0.15)", purpleMid:"rgba(155,109,255,0.35)",
-  green:"#3dbe78", greenDim:"rgba(61,190,120,0.15)", greenMid:"rgba(61,190,120,0.35)",
-  yellow:"#e0c040", yellowDim:"rgba(224,192,64,0.12)", yellowMid:"rgba(224,192,64,0.30)",
-  orange:"#e8762b", orangeDim:"rgba(232,118,43,0.15)", orangeMid:"rgba(232,118,43,0.35)",
-  teal:"#2bbfa0", tealDim:"rgba(43,191,160,0.15)", tealMid:"rgba(43,191,160,0.35)",
+  bg0:"#08080c", bg1:"#0f0f18", bg2:"#161624", bg3:"#1e1e30", bg4:"#28283c",
+  border0:"#1e1e2e", border1:"#2c2c40", border2:"#3a3a50",
+  text0:"#eae9f0", text1:"#c4c3ce", text2:"#9a99aa", text3:"#8a8999",
+  // Semantic colors
+  accent:"#4a8fe7", accentDim:"rgba(74,143,231,0.12)",
+  positive:"#3dbe78", positiveDim:"rgba(61,190,120,0.12)",
+  warning:"#e0c040", warningDim:"rgba(224,192,64,0.10)",
+  danger:"#e84a5a", dangerDim:"rgba(232,74,90,0.12)",
+  info:"#9b6dff", infoDim:"rgba(155,109,255,0.12)",
+  highlight:"#e8762b", highlightDim:"rgba(232,118,43,0.12)",
+  // Legacy aliases
+  blue:"#4a8fe7", blueDim:"rgba(74,143,231,0.12)", blueMid:"rgba(74,143,231,0.35)",
+  red:"#e84a5a", redDim:"rgba(232,74,90,0.12)", redMid:"rgba(232,74,90,0.35)",
+  purple:"#9b6dff", purpleDim:"rgba(155,109,255,0.12)", purpleMid:"rgba(155,109,255,0.35)",
+  green:"#3dbe78", greenDim:"rgba(61,190,120,0.12)", greenMid:"rgba(61,190,120,0.35)",
+  yellow:"#e0c040", yellowDim:"rgba(224,192,64,0.10)", yellowMid:"rgba(224,192,64,0.30)",
+  orange:"#e8762b", orangeDim:"rgba(232,118,43,0.12)", orangeMid:"rgba(232,118,43,0.35)",
+  teal:"#2bbfa0", tealDim:"rgba(43,191,160,0.12)", tealMid:"rgba(43,191,160,0.35)",
   silver:"#b0b3c0", silverDim:"rgba(176,179,192,0.10)", silverMid:"rgba(176,179,192,0.28)",
-  crimson:"#dc2640", crimsonDim:"rgba(220,38,64,0.15)", crimsonMid:"rgba(220,38,64,0.35)",
-  rSm:3, rMd:5, rLg:8, rPill:100,
-  mono:"ui-monospace, 'SF Mono', monospace",
-  display:"Georgia, serif",
-  body:"system-ui, sans-serif",
+  crimson:"#dc2640", crimsonDim:"rgba(220,38,64,0.12)", crimsonMid:"rgba(220,38,64,0.35)",
+  rSm:4, rMd:6, rLg:10, rPill:100,
+  mono:"ui-monospace, 'SF Mono', 'Cascadia Code', monospace",
+  display:"Georgia, 'Times New Roman', serif",
+  body:"system-ui, -apple-system, sans-serif",
+  // Type scale
+  fs:{ xs:"0.65rem", sm:"0.75rem", md:"0.85rem", lg:"1.05rem", xl:"1.35rem", xxl:"1.70rem" },
+  // Spacing scale
+  sp:{ xs:4, sm:8, md:12, lg:16, xl:24, xxl:32 },
 };
 
 const LEVEL_COLOR = {
@@ -1461,7 +1473,7 @@ function Chip({ level, children, style: sx, onClick }) {
   return (
     <span onClick={onClick} style={{
       display:"inline-flex", alignItems:"center", gap:"0.35em",
-      fontFamily:T.mono, fontSize:"0.68rem", fontWeight:500,
+      fontFamily:T.mono, fontSize:T.fs.xs, fontWeight:500,
       padding:"0.25em 0.65em", borderRadius:T.rSm,
       border:`1px solid ${c ? `${c.base}44` : T.border1}`,
       background: c ? c.dim : T.bg2, color: c ? c.base : T.text1,
@@ -1477,7 +1489,7 @@ function Badge({ children, color = T.crimson }) {
   return (
     <span style={{
       display:"inline-flex", alignItems:"center", justifyContent:"center",
-      minWidth:20, height:20, fontFamily:T.mono, fontSize:"0.6rem",
+      minWidth:20, height:20, fontFamily:T.mono, fontSize:T.fs.xs,
       fontWeight:600, padding:"0 5px", borderRadius:T.rPill,
       background:color, color: [T.yellow,T.teal,T.green].includes(color) ? "#0a1a10" : "#fff",
     }}>{children}</span>
@@ -1557,11 +1569,11 @@ function ProgressBar({ value, color, thick }) {
 function MetricCard({ label, value, unit, delta, deltaDir, color }) {
   return (
     <div style={{ background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:16 }}>
-      <div style={{ fontFamily:T.mono, fontSize:"0.6rem", textTransform:"uppercase", letterSpacing:"0.14em", color:T.text3, marginBottom:6 }}>{label}</div>
+      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.14em", color:T.text3, marginBottom:6 }}>{label}</div>
       <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.6rem", color:color||T.text0, lineHeight:1 }}>
         {value}{unit && <span style={{ fontSize:"0.8rem", fontWeight:400 }}>{unit}</span>}
       </div>
-      {delta && <div style={{ fontFamily:T.mono, fontSize:"0.65rem", marginTop:6, color: deltaDir==="up"?T.green:deltaDir==="down"?T.crimson:T.text3 }}>{delta}</div>}
+      {delta && <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, marginTop:6, color: deltaDir==="up"?T.green:deltaDir==="down"?T.crimson:T.text3 }}>{delta}</div>}
     </div>
   );
 }
@@ -1586,7 +1598,7 @@ function Segmented({ options, active, onChange }) {
     <div style={{ display:"inline-flex", background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:2, gap:2, flexWrap:"wrap" }}>
       {options.map(o => (
         <button key={o.key} onClick={() => onChange(o.key)} style={{
-          fontFamily:T.mono, fontSize:"0.68rem", padding:"0.3em 0.7em",
+          fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.3em 0.7em",
           borderRadius:T.rSm, border:"none", cursor:"pointer",
           background: active===o.key ? T.bg4 : "transparent",
           color: active===o.key ? T.text0 : T.text3,
@@ -1627,16 +1639,16 @@ function TechCard({ tech, expanded, onToggle }) {
       <div onClick={onToggle} style={{ padding:"12px 14px", cursor:"pointer" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
           <StatusDot color={fc} size={7} />
-          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.88rem", color:T.text0, flex:1 }}>{tech.name}</span>
-          <span style={{ fontFamily:T.mono, fontSize:"0.58rem", padding:"0.15em 0.5em", borderRadius:T.rSm,
+          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{tech.name}</span>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.15em 0.5em", borderRadius:T.rSm,
             background:`${fc}22`, color:fc, border:`1px solid ${fc}33` }}>{familyName(tech.family)}</span>
-          <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3, transform:expanded?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:expanded?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
         </div>
-        <div style={{ fontFamily:T.body, fontSize:"0.75rem", color:T.text2, marginLeft:15 }}>{tech.desc}</div>
+        <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginLeft:15 }}>{tech.desc}</div>
         <div style={{ display:"flex", gap:4, marginTop:8, marginLeft:15, flexWrap:"wrap" }}>
-          <span style={{ fontFamily:T.mono, fontSize:"0.55rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
             background:(roleColors[tech.pipelineRole]||T.text3)+"22", color:roleColors[tech.pipelineRole]||T.text3 }}>{tech.pipelineRole}</span>
-          <span style={{ fontFamily:T.mono, fontSize:"0.55rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
             background:(riskColors[tech.leakageRisk]||T.text3)+"22", color:riskColors[tech.leakageRisk]||T.text3 }}>leak: {tech.leakageRisk}</span>
           {Array.from({length:5}).map((_,i) => (
             <span key={i} style={{ width:6, height:6, borderRadius:"50%", background: i < tech.complexity ? fc : T.bg4, marginTop:3 }} />
@@ -1647,32 +1659,32 @@ function TechCard({ tech, expanded, onToggle }) {
         <div style={{ padding:"0 14px 14px", borderTop:`1px solid ${T.border0}` }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:10 }}>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Inputs</div>
-              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.inputTypes.map(t => <Chip key={t} style={{ fontSize:"0.6rem" }}>{t}</Chip>)}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Inputs</div>
+              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.inputTypes.map(t => <Chip key={t} style={{ fontSize:T.fs.xs }}>{t}</Chip>)}</div>
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Outputs</div>
-              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.outputTypes.map(t => <Chip key={t} style={{ fontSize:"0.6rem" }}>{t}</Chip>)}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Outputs</div>
+              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.outputTypes.map(t => <Chip key={t} style={{ fontSize:T.fs.xs }}>{t}</Chip>)}</div>
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Assumptions</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Assumptions</div>
               <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
-                {tech.assumptions.length ? tech.assumptions.map(a => <Chip key={a} style={{ fontSize:"0.6rem" }}>{a.replace(/_/g," ")}</Chip>) : <span style={{fontFamily:T.mono,fontSize:"0.6rem",color:T.text3}}>none</span>}
+                {tech.assumptions.length ? tech.assumptions.map(a => <Chip key={a} style={{ fontSize:T.fs.xs }}>{a.replace(/_/g," ")}</Chip>) : <span style={{fontFamily:T.mono,fontSize:T.fs.xs,color:T.text3}}>none</span>}
               </div>
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Owns</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Owns</div>
               <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
-                {tech.ownedResponsibilities.length ? tech.ownedResponsibilities.map(r => <Chip key={r} style={{ fontSize:"0.6rem", background:T.purpleDim, color:T.purple, border:`1px solid ${T.purple}33` }}>{r.replace(/_/g," ")}</Chip>) : <span style={{fontFamily:T.mono,fontSize:"0.6rem",color:T.text3}}>none</span>}
+                {tech.ownedResponsibilities.length ? tech.ownedResponsibilities.map(r => <Chip key={r} style={{ fontSize:T.fs.xs, background:T.purpleDim, color:T.purple, border:`1px solid ${T.purple}33` }}>{r.replace(/_/g," ")}</Chip>) : <span style={{fontFamily:T.mono,fontSize:T.fs.xs,color:T.text3}}>none</span>}
               </div>
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Time Scales</div>
-              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.timeScales.map(s => <Chip key={s} style={{ fontSize:"0.6rem" }}>{s}</Chip>)}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Time Scales</div>
+              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.timeScales.map(s => <Chip key={s} style={{ fontSize:T.fs.xs }}>{s}</Chip>)}</div>
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Best For</div>
-              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.bestFor.map(b => <Chip key={b} style={{ fontSize:"0.6rem", background:T.greenDim, color:T.green, border:`1px solid ${T.green}33` }}>{b}</Chip>)}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:4 }}>Best For</div>
+              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>{tech.bestFor.map(b => <Chip key={b} style={{ fontSize:T.fs.xs, background:T.greenDim, color:T.green, border:`1px solid ${T.green}33` }}>{b}</Chip>)}</div>
             </div>
           </div>
           {/* ─── TECHNIQUE_DETAILS enrichment ─── */}
@@ -1686,21 +1698,21 @@ function TechCard({ tech, expanded, onToggle }) {
               <div style={{ marginTop:12, paddingTop:10, borderTop:`1px dashed ${T.border0}` }}>
                 {/* Strengths */}
                 <div style={{ marginBottom:10 }}>
-                  <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Strengths</div>
+                  <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Strengths</div>
                   {d.strengths.map((s,i) => (
                     <div key={i} style={{ display:"flex", gap:6, alignItems:"flex-start", padding:"2px 0" }}>
                       <StatusDot color={T.green} size={5} />
-                      <span style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.text1 }}>{s}</span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>{s}</span>
                     </div>
                   ))}
                 </div>
                 {/* Weaknesses */}
                 <div style={{ marginBottom:10 }}>
-                  <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Weaknesses</div>
+                  <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Weaknesses</div>
                   {d.weaknesses.map((w,i) => (
                     <div key={i} style={{ display:"flex", gap:6, alignItems:"flex-start", padding:"2px 0" }}>
                       <StatusDot color={T.crimson} size={5} />
-                      <span style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.text1 }}>{w}</span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>{w}</span>
                     </div>
                   ))}
                 </div>
@@ -1708,34 +1720,34 @@ function TechCard({ tech, expanded, onToggle }) {
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
                   {/* Synergies */}
                   <div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.teal, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Synergies With</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.teal, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Synergies With</div>
                     <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                       {d.synergiesWith.length ? d.synergiesWith.map(id => (
-                        <span key={id} style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+                        <span key={id} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
                           background:`${techColor(id)}15`, color:techColor(id), border:`1px solid ${techColor(id)}33`, cursor:"default" }}>
                           {techName(id)}
                         </span>
-                      )) : <span style={{fontFamily:T.mono,fontSize:"0.6rem",color:T.text3}}>none</span>}
+                      )) : <span style={{fontFamily:T.mono,fontSize:T.fs.xs,color:T.text3}}>none</span>}
                     </div>
                   </div>
                   {/* Conflicts */}
                   <div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Conflicts With</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Conflicts With</div>
                     <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                       {d.conflictsWith.length ? d.conflictsWith.map(id => (
-                        <span key={id} style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+                        <span key={id} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
                           background:T.crimsonDim, color:T.crimson, border:`1px solid ${T.crimson}33`, cursor:"default" }}>
                           {techName(id)}
                         </span>
-                      )) : <span style={{fontFamily:T.mono,fontSize:"0.6rem",color:T.text3}}>none</span>}
+                      )) : <span style={{fontFamily:T.mono,fontSize:T.fs.xs,color:T.text3}}>none</span>}
                     </div>
                   </div>
                   {/* Related */}
                   <div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Related To</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Related To</div>
                     <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                       {d.relatedTo.map(id => (
-                        <span key={id} style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+                        <span key={id} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
                           background:T.bg4, color:T.text2, border:`1px solid ${T.border1}`, cursor:"default" }}>
                           {techName(id)}
                         </span>
@@ -1746,13 +1758,13 @@ function TechCard({ tech, expanded, onToggle }) {
                 {/* Relevant CLR Operators */}
                 {d.relevantOps.length > 0 && (
                   <div style={{ marginTop:10 }}>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.orange, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>CLR Operators</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.orange, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>CLR Operators</div>
                     <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                       {d.relevantOps.map(opId => {
                         const op = OPERATORS.find(o => o.id === opId);
                         const cc = op ? (OP_CATEGORIES.find(c => c.id === op.category) || {}).color || T.text3 : T.text3;
                         return (
-                          <span key={opId} title={op ? op.description : opId} style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.5em", borderRadius:T.rSm,
+                          <span key={opId} title={op ? op.description : opId} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.5em", borderRadius:T.rSm,
                             background:`${cc}15`, color:cc, border:`1px solid ${cc}33`, cursor:"help" }}>
                             {opId}
                           </span>
@@ -1767,10 +1779,10 @@ function TechCard({ tech, expanded, onToggle }) {
                   if (pipes.length === 0) return null;
                   return (
                     <div style={{ marginTop:10 }}>
-                      <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.blue, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Appears in Pipelines</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.blue, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>Appears in Pipelines</div>
                       <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                         {pipes.map(p => (
-                          <span key={p.id} title={p.description} style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.5em", borderRadius:T.rSm,
+                          <span key={p.id} title={p.description} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.5em", borderRadius:T.rSm,
                             background:T.blueDim, color:T.blue, border:`1px solid ${T.blue}33`, cursor:"help" }}>
                             {p.name}
                           </span>
@@ -1788,12 +1800,12 @@ function TechCard({ tech, expanded, onToggle }) {
                   return (
                     <div style={{ marginTop:10, padding:"8px 10px", background:`${hc.color}08`, borderRadius:T.rSm, border:`1px solid ${hc.color}20` }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.55rem", color:hc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>Hilbert</span>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.1em 0.4em", borderRadius:T.rSm,
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:hc.color, textTransform:"uppercase", letterSpacing:"0.1em" }}>Hilbert</span>
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
                           background:`${hc.color}18`, color:hc.color, border:`1px solid ${hc.color}33` }}>{hc.symbol}</span>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.58rem", color:hc.color }}>{hc.name}</span>
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:hc.color }}>{hc.name}</span>
                       </div>
-                      <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text2, fontStyle:"italic" }}>{hm.interpretation}</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, fontStyle:"italic" }}>{hm.interpretation}</div>
                     </div>
                   );
                 })()}
@@ -1815,31 +1827,31 @@ function PrincipleCard({ p, expanded, onToggle }) {
       <div onClick={onToggle} style={{ padding:"12px 14px", cursor:"pointer" }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <Badge color={cc}>{p.id}</Badge>
-          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.88rem", color:T.text0, flex:1 }}>{p.name}</span>
-          <span style={{ fontFamily:T.mono, fontSize:"0.55rem", padding:"0.15em 0.5em", borderRadius:T.rSm,
+          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{p.name}</span>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.15em 0.5em", borderRadius:T.rSm,
             background:`${cc}22`, color:cc }}>{p.category}</span>
-          <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3, transform:expanded?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:expanded?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
         </div>
-        <div style={{ fontFamily:T.body, fontSize:"0.75rem", color:T.text2, marginTop:6, marginLeft:28 }}>{p.description}</div>
+        <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginTop:6, marginLeft:28 }}>{p.description}</div>
       </div>
       <div style={{ maxHeight:expanded?500:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
         <div style={{ padding:"0 14px 14px", borderTop:`1px solid ${T.border0}` }}>
-          <div style={{ fontFamily:T.mono, fontSize:"0.68rem", color:T.text0, padding:"10px 0 8px", borderBottom:`1px dashed ${T.border0}` }}>
+          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, padding:"10px 0 8px", borderBottom:`1px dashed ${T.border0}` }}>
             <span style={{ color:T.text3 }}>Rule: </span>{p.rule}
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:10 }}>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Safe Examples</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Safe Examples</div>
               {p.safeExamples.map((e,i) => (
-                <div key={i} style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.text1, padding:"4px 0", display:"flex", gap:6, alignItems:"flex-start" }}>
+                <div key={i} style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"4px 0", display:"flex", gap:6, alignItems:"flex-start" }}>
                   <StatusDot color={T.green} size={5} /><span>{e}</span>
                 </div>
               ))}
             </div>
             <div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Unsafe Examples</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Unsafe Examples</div>
               {p.unsafeExamples.map((e,i) => (
-                <div key={i} style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.text1, padding:"4px 0", display:"flex", gap:6, alignItems:"flex-start" }}>
+                <div key={i} style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"4px 0", display:"flex", gap:6, alignItems:"flex-start" }}>
                   <StatusDot color={T.crimson} size={5} /><span>{e}</span>
                 </div>
               ))}
@@ -1880,7 +1892,7 @@ function TechniquesTab() {
           options={[{key:"all",label:"All"},...FAMILIES.map(f=>({key:f.id,label:f.name}))]}
           active={familyFilter} onChange={setFamilyFilter} />
       </div>
-      <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3, marginBottom:12 }}>
+      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:12 }}>
         {filtered.length} technique{filtered.length!==1?"s":""} · {new Set(filtered.map(t=>t.family)).size} families
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(380px, 1fr))", gap:8 }}>
@@ -1950,18 +1962,18 @@ function ComposerTab() {
                         <button onClick={() => removeTech(idx)} style={{
                           position:"absolute", top:-6, right:-6, width:16, height:16, borderRadius:"50%",
                           background:T.crimson, color:"#fff", border:"none", cursor:"pointer",
-                          fontFamily:T.mono, fontSize:"0.5rem", display:"flex", alignItems:"center", justifyContent:"center",
+                          fontFamily:T.mono, fontSize:T.fs.xs, display:"flex", alignItems:"center", justifyContent:"center",
                         }}>x</button>
                         <div style={{ width:6, height:6, borderRadius:"50%", background:fc, margin:"0 auto 4px" }} />
-                        <div style={{ fontFamily:T.mono, fontSize:"0.68rem", color:T.text0, fontWeight:600 }}>{tech.name}</div>
-                        <div style={{ fontFamily:T.mono, fontSize:"0.52rem", color:T.text3 }}>{tech.pipelineRole}</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, fontWeight:600 }}>{tech.name}</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{tech.pipelineRole}</div>
                       </div>
                     </div>
                     {idx < pipeline.length - 1 && (
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", minWidth:30 }}>
                         {pairChecks[idx] && (
                           <React.Fragment>
-                            <div style={{ fontFamily:T.mono, fontSize:"0.52rem", color: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson, marginBottom:2 }}>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson, marginBottom:2 }}>
                               {(pairChecks[idx].score*100).toFixed(0)}%
                             </div>
                             <div style={{ width:20, height:2, background: pairChecks[idx].score>0.8?T.green:pairChecks[idx].score>0.5?T.yellow:T.crimson }} />
@@ -1976,13 +1988,13 @@ function ComposerTab() {
             </div>
             {pipeline.length >= 2 && (
               <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:12, paddingTop:10, borderTop:`1px solid ${T.border0}` }}>
-                <span style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3 }}>Overall Score</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Overall Score</span>
                 <div style={{ flex:1 }}><ProgressBar value={overallScore} color={scoreColor} thick /></div>
                 <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.1rem", color:scoreColor }}>{(overallScore*100).toFixed(0)}%</span>
               </div>
             )}
             <div style={{ textAlign:"right", marginTop:8 }}>
-              <button onClick={clearPipeline} style={{ fontFamily:T.mono, fontSize:"0.62rem", padding:"4px 10px",
+              <button onClick={clearPipeline} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 10px",
                 borderRadius:T.rSm, border:`1px solid ${T.border1}`, background:T.bg3, color:T.text2, cursor:"pointer" }}>Clear</button>
             </div>
           </div>
@@ -2008,8 +2020,8 @@ function ComposerTab() {
                     borderRadius:T.rSm, background: c.severity==="ok"?T.greenDim:c.severity==="warn"?T.yellowDim:T.crimsonDim }}>
                     <StatusDot color={c.severity==="ok"?T.green:c.severity==="warn"?T.yellow:T.crimson} size={6} />
                     <div>
-                      <div style={{ fontFamily:T.mono, fontSize:"0.62rem", fontWeight:600, color:T.text0 }}>{c.name}</div>
-                      <div style={{ fontFamily:T.mono, fontSize:"0.58rem", color:T.text2 }}>{c.detail}</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, fontWeight:600, color:T.text0 }}>{c.name}</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>{c.detail}</div>
                     </div>
                   </div>
                 ))}
@@ -2021,7 +2033,7 @@ function ComposerTab() {
 
       {/* Canonical Pipelines */}
       <Section title="Canonical Pipelines" count={CANONICAL_PIPELINES.length} color={T.blue} style={{ marginTop:12 }}>
-        <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3, marginBottom:10 }}>
+        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:10 }}>
           Click a pipeline to load it into the composer
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:8 }}>
@@ -2032,18 +2044,18 @@ function ComposerTab() {
             }}>
               <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
                 <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.78rem", color:T.text0, flex:1 }}>{cp.name}</span>
-                <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.12em 0.4em", borderRadius:T.rSm,
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
                   background:T.bg4, color:T.text3 }}>complexity {cp.complexity}</span>
               </div>
-              <div style={{ fontFamily:T.body, fontSize:"0.68rem", color:T.text2, marginBottom:6 }}>{cp.description}</div>
+              <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginBottom:6 }}>{cp.description}</div>
               <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"wrap", marginBottom:4 }}>
                 {cp.steps.map((sid, i) => {
                   const t = TECHNIQUES.find(x => x.id === sid);
                   const fc = t ? familyColor(t.family) : T.text3;
                   return (
                     <React.Fragment key={sid}>
-                      {i > 0 && <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3 }}>→</span>}
-                      <span style={{ fontFamily:T.mono, fontSize:"0.58rem", padding:"0.1em 0.4em", borderRadius:T.rSm,
+                      {i > 0 && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>→</span>}
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
                         background:`${fc}18`, color:fc, border:`1px solid ${fc}33` }}>
                         {t ? t.name : sid}
                       </span>
@@ -2051,7 +2063,7 @@ function ComposerTab() {
                   );
                 })}
               </div>
-              <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3 }}>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>
                 <span style={{ color:T.teal }}>{cp.archetype}</span> · {cp.useCase}
               </div>
             </button>
@@ -2062,7 +2074,7 @@ function ComposerTab() {
       {/* Technique palette */}
       <div style={{ marginTop:12 }}>
         <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:10, flexWrap:"wrap" }}>
-          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.88rem", color:T.text0 }}>Add Technique</span>
+          <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0 }}>Add Technique</span>
           <Segmented options={[{key:"all",label:"All"},...FAMILIES.map(f=>({key:f.id,label:f.name}))]}
             active={familyFilter} onChange={setFamilyFilter} />
         </div>
@@ -2074,8 +2086,8 @@ function ComposerTab() {
                 background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rSm,
                 padding:"8px 10px", cursor:"pointer", textAlign:"left", borderTop:`2px solid ${fc}`,
               }}>
-                <div style={{ fontFamily:T.mono, fontSize:"0.68rem", color:T.text0, fontWeight:500 }}>{t.name}</div>
-                <div style={{ fontFamily:T.mono, fontSize:"0.52rem", color:T.text3, marginTop:2 }}>{t.pipelineRole} · {t.family}</div>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, fontWeight:500 }}>{t.name}</div>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>{t.pipelineRole} · {t.family}</div>
               </button>
             );
           })}
@@ -2123,7 +2135,7 @@ function MatrixTab() {
       <div style={{ display:"flex", gap:10, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
         <Segmented options={[{key:"all",label:"All (35)"},...FAMILIES.map(f=>({key:f.id,label:f.name}))]}
           active={familyFilter} onChange={setFamilyFilter} />
-        <span style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3 }}>
+        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>
           {techs.length}×{techs.length} = {techs.length*techs.length} cells · Hover for details
         </span>
       </div>
@@ -2167,7 +2179,7 @@ function MatrixTab() {
           {hoverData && hoverA && hoverB ? (
             <Section title={`${hoverA.name} → ${hoverB.name}`} color={hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                <span style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3 }}>Score</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>Score</span>
                 <div style={{ flex:1 }}><ProgressBar value={hoverData.score} color={hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson} thick /></div>
                 <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1rem", color:hoverData.score>0.8?T.green:hoverData.score>0.5?T.yellow:T.crimson }}>
                   {(hoverData.score*100).toFixed(0)}%
@@ -2178,8 +2190,8 @@ function MatrixTab() {
                   borderBottom: i < hoverData.checks.length-1 ? `1px solid ${T.border0}` : "none" }}>
                   <StatusDot color={c.severity==="ok"?T.green:c.severity==="warn"?T.yellow:T.crimson} size={6} />
                   <div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.62rem", fontWeight:600, color:T.text0 }}>{c.name}</div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text2 }}>{c.detail}</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, fontWeight:600, color:T.text0 }}>{c.name}</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>{c.detail}</div>
                   </div>
                 </div>
               ))}
@@ -2192,11 +2204,11 @@ function MatrixTab() {
 
           {/* Legend */}
           <div style={{ marginTop:12, background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:12 }}>
-            <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>Legend</div>
+            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>Legend</div>
             {[{label:"> 80% Compatible",color:T.green},{label:"60-80%",color:`${T.green}88`},{label:"40-60%",color:T.yellow},{label:"20-40%",color:T.orange},{label:"< 20%",color:T.crimson}].map(l => (
               <div key={l.label} style={{ display:"flex", alignItems:"center", gap:8, padding:"2px 0" }}>
                 <div style={{ width:14, height:14, borderRadius:2, background:l.color, opacity:0.7 }} />
-                <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text2 }}>{l.label}</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>{l.label}</span>
               </div>
             ))}
           </div>
@@ -2224,10 +2236,10 @@ function PrinciplesTab() {
         <Segmented options={[{key:"all",label:"All (12)"},...cats.map(c => ({key:c,label:c}))]}
           active={catFilter} onChange={setCatFilter} />
         <button onClick={() => setExpanded(new Set(filtered.map(p=>p.id)))} style={{
-          fontFamily:T.mono, fontSize:"0.62rem", padding:"4px 10px", borderRadius:T.rSm,
+          fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 10px", borderRadius:T.rSm,
           border:`1px solid ${T.border1}`, background:T.bg3, color:T.text2, cursor:"pointer" }}>Expand All</button>
         <button onClick={() => setExpanded(new Set())} style={{
-          fontFamily:T.mono, fontSize:"0.62rem", padding:"4px 10px", borderRadius:T.rSm,
+          fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 10px", borderRadius:T.rSm,
           border:`1px solid ${T.border1}`, background:T.bg3, color:T.text2, cursor:"pointer" }}>Collapse All</button>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -2248,7 +2260,7 @@ function CondensedLogsTab() {
 
   const filteredOps = opCat === "all" ? OPERATORS : OPERATORS.filter(o => o.category === opCat);
 
-  const thS = { fontFamily:T.mono, fontSize:"0.58rem", textTransform:"uppercase", letterSpacing:"0.12em", color:T.text3, padding:"8px 10px", textAlign:"left", fontWeight:500, borderBottom:`1px solid ${T.border0}` };
+  const thS = { fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.12em", color:T.text3, padding:"8px 10px", textAlign:"left", fontWeight:500, borderBottom:`1px solid ${T.border0}` };
   const tdS = { padding:"6px 10px", borderBottom:`1px solid ${T.border0}`, fontFamily:T.mono, fontSize:"0.72rem", color:T.text1 };
 
   return (
@@ -2292,11 +2304,11 @@ function CondensedLogsTab() {
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
                     <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:T.text0 }}>{op.id}</span>
-                    <span style={{ fontFamily:T.mono, fontSize:"0.55rem", padding:"0.1em 0.4em", borderRadius:T.rSm,
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
                       background:`${cc}22`, color:cc }}>{op.category}</span>
                   </div>
                   <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:3 }}>{op.description}</div>
-                  <div style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.teal, background:T.tealDim, padding:"2px 6px", borderRadius:T.rSm, display:"inline-block" }}>{op.formula}</div>
+                  <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.teal, background:T.tealDim, padding:"2px 6px", borderRadius:T.rSm, display:"inline-block" }}>{op.formula}</div>
                   {/* Cross-reference: which techniques use this operator */}
                   {(() => {
                     const users = TECHNIQUES.filter(t => {
@@ -2306,9 +2318,9 @@ function CondensedLogsTab() {
                     if (users.length === 0) return null;
                     return (
                       <div style={{ marginTop:5, display:"flex", gap:3, flexWrap:"wrap", alignItems:"center" }}>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.5rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.08em" }}>Used by:</span>
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.08em" }}>Used by:</span>
                         {users.map(t => (
-                          <span key={t.id} style={{ fontFamily:T.mono, fontSize:"0.55rem", padding:"0.08em 0.35em", borderRadius:T.rSm,
+                          <span key={t.id} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.08em 0.35em", borderRadius:T.rSm,
                             background:`${familyColor(t.family)}12`, color:familyColor(t.family), border:`1px solid ${familyColor(t.family)}28` }}>
                             {t.name}
                           </span>
@@ -2334,7 +2346,7 @@ function CondensedLogsTab() {
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <StatusDot color={T.teal} size={7} />
                     <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.85rem", color:T.text0, flex:1 }}>{arch.name}</span>
-                    <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
                   </div>
                   <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginTop:4, marginLeft:15 }}>{arch.description}</div>
                 </div>
@@ -2342,22 +2354,22 @@ function CondensedLogsTab() {
                   <div style={{ padding:"0 12px 12px", borderTop:`1px solid ${T.border0}` }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop:10 }}>
                       <div>
-                        <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Example Streams</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Example Streams</div>
                         {arch.streams.map((s,i) => (
-                          <div key={i} style={{ fontFamily:T.mono, fontSize:"0.65rem", color:T.text1, padding:"2px 0", display:"flex", gap:4, alignItems:"center" }}>
+                          <div key={i} style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"2px 0", display:"flex", gap:4, alignItems:"center" }}>
                             <StatusDot color={T.blue} size={4} />{s}
                           </div>
                         ))}
                       </div>
                       <div>
-                        <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Recommended Chain</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.green, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>Recommended Chain</div>
                         <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                           {arch.recommendedChain.map((tid,i) => {
                             const tech = TECHNIQUES.find(t => t.id === tid);
                             return (
                               <React.Fragment key={tid}>
-                                {i > 0 && <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3 }}>→</span>}
-                                <Chip style={{ fontSize:"0.6rem", background:familyColor(tech?.family)+"22",
+                                {i > 0 && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>→</span>}
+                                <Chip style={{ fontSize:T.fs.xs, background:familyColor(tech?.family)+"22",
                                   color:familyColor(tech?.family), border:`1px solid ${familyColor(tech?.family)}33` }}>
                                   {tech?.name || tid}
                                 </Chip>
@@ -2365,9 +2377,9 @@ function CondensedLogsTab() {
                             );
                           })}
                         </div>
-                        <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:10, marginBottom:6 }}>Anti-Patterns</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.crimson, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:10, marginBottom:6 }}>Anti-Patterns</div>
                         {arch.antiPatterns.map((ap,i) => (
-                          <div key={i} style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text2, padding:"2px 0", display:"flex", gap:4, alignItems:"flex-start" }}>
+                          <div key={i} style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, padding:"2px 0", display:"flex", gap:4, alignItems:"flex-start" }}>
                             <StatusDot color={T.crimson} size={4} />{ap}
                           </div>
                         ))}
@@ -2434,7 +2446,7 @@ function ObservatoryTab() {
   const feedCategories = [...new Set(LIVE_FEEDS.map(f => f.category))];
   const filteredFeeds = feedCategory === "all" ? LIVE_FEEDS : LIVE_FEEDS.filter(f => f.category === feedCategory);
 
-  const labelS = { fontFamily:T.mono, fontSize:"0.55rem", color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
+  const labelS = { fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
   const statS = { fontFamily:T.mono, fontSize:"0.72rem" };
 
   return (
@@ -2453,11 +2465,11 @@ function ObservatoryTab() {
               display:"block", width:"100%",
             }}>
               <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text0, fontWeight:600 }}>{f.name}</div>
-              <div style={{ fontFamily:T.body, fontSize:"0.65rem", color:T.text2, marginTop:2 }}>{f.description}</div>
+              <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
               <div style={{ display:"flex", gap:4, marginTop:4 }}>
-                <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                   background:T.bg4, color:T.text3 }}>{f.category}</span>
-                <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                   background:T.tealDim, color:T.teal }}>{f.archetype}</span>
               </div>
             </button>
@@ -2467,7 +2479,7 @@ function ObservatoryTab() {
 
       {/* Synthetic Generators */}
       <Section title="Synthetic Generators" count={SYNTHETIC_FEEDS.length} color={T.green} style={{ marginTop:12 }}>
-        <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3, marginBottom:8 }}>
+        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:8 }}>
           Generate controlled time series to test technique recommendations
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:6 }}>
@@ -2478,8 +2490,8 @@ function ObservatoryTab() {
               display:"block", width:"100%",
             }}>
               <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text0, fontWeight:600 }}>{f.name}</div>
-              <div style={{ fontFamily:T.body, fontSize:"0.65rem", color:T.text2, marginTop:2 }}>{f.description}</div>
-              <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+              <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                 background:T.tealDim, color:T.teal, marginTop:4, display:"inline-block" }}>{f.archetype}</span>
             </button>
           ))}
@@ -2583,7 +2595,7 @@ function ObservatoryTab() {
 
           {/* Technique Recommendations */}
           <Section title="Recommended Techniques" count={techRecs.length} color={T.orange} style={{ marginTop:12 }}>
-            <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3, marginBottom:10 }}>
+            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:10 }}>
               Ranked by priority — based on detected series characteristics
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
@@ -2601,14 +2613,14 @@ function ObservatoryTab() {
                     <div style={{ flex:1 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
                         <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:T.text0 }}>{tech.name}</span>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                           background:`${fc}18`, color:fc }}>{tech.family}</span>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                           background:`${pc}18`, color:pc }}>{prioLabels[rec.priority]}</span>
                       </div>
-                      <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text2 }}>{rec.reason}</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>{rec.reason}</div>
                     </div>
-                    <span style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3 }}>{tech.pipelineRole}</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{tech.pipelineRole}</span>
                   </div>
                 );
               })}
@@ -2618,7 +2630,7 @@ function ObservatoryTab() {
           {/* Pipeline Recommendations */}
           {pipeRecs.length > 0 && (
             <Section title="Matching Pipelines" count={pipeRecs.length} color={T.green} style={{ marginTop:12 }}>
-              <div style={{ fontFamily:T.mono, fontSize:"0.62rem", color:T.text3, marginBottom:10 }}>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:10 }}>
                 Canonical pipelines that match this series' characteristics
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
@@ -2627,10 +2639,10 @@ function ObservatoryTab() {
                     padding:"10px 12px", borderLeft:`3px solid ${T.green}` }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
                       <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.78rem", color:T.text0, flex:1 }}>{p.name}</span>
-                      <span style={{ fontFamily:T.mono, fontSize:"0.52rem", padding:"0.1em 0.35em", borderRadius:T.rSm,
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                         background:T.bg4, color:T.text3 }}>complexity {p.complexity}</span>
                     </div>
-                    <div style={{ fontFamily:T.body, fontSize:"0.68rem", color:T.text2, marginBottom:6 }}>{p.description}</div>
+                    <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginBottom:6 }}>{p.description}</div>
                     <div style={{ display:"flex", gap:3, alignItems:"center", flexWrap:"wrap", marginBottom:4 }}>
                       {p.steps.map((sid, i) => {
                         const t = TECHNIQUES.find(x => x.id === sid);
@@ -2638,8 +2650,8 @@ function ObservatoryTab() {
                         const isRec = techRecs.some(r => r.id === sid);
                         return (
                           <React.Fragment key={sid}>
-                            {i > 0 && <span style={{ fontFamily:T.mono, fontSize:"0.6rem", color:T.text3 }}>→</span>}
-                            <span style={{ fontFamily:T.mono, fontSize:"0.6rem", padding:"0.12em 0.45em", borderRadius:T.rSm,
+                            {i > 0 && <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>→</span>}
+                            <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.45em", borderRadius:T.rSm,
                               background:`${fc}${isRec ? "28" : "12"}`, color:fc,
                               border:`1px solid ${fc}${isRec ? "55" : "28"}`, fontWeight: isRec ? 600 : 400 }}>
                               {t ? t.name : sid}{isRec ? " ★" : ""}
@@ -2648,7 +2660,7 @@ function ObservatoryTab() {
                         );
                       })}
                     </div>
-                    <div style={{ fontFamily:T.mono, fontSize:"0.55rem", color:T.text3 }}>{p.useCase}</div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{p.useCase}</div>
                   </div>
                 ))}
               </div>
@@ -3074,8 +3086,49 @@ function GraphTab() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB 8: CAUSAL LAB — Hilbert space causal inference
+// TAB 8: CAUSAL LAB — Full 10-step causal discovery machine
+// with live data feeds, step-by-step numerical walkthrough
 // ═══════════════════════════════════════════════════════════════
+
+// Helper: compute explicit OLS coefficients and predictions for display
+function olsDetailed(target, features) {
+  const m = target.length, p = features[0].length;
+  const A = Array.from({length:p}, () => new Array(p+1).fill(0));
+  for (let i=0;i<m;i++) for (let j=0;j<p;j++) {
+    A[j][p] += features[i][j]*target[i];
+    for (let k=j;k<p;k++) { A[j][k] += features[i][j]*features[i][k]; if(k>j) A[k][j]=A[j][k]; }
+  }
+  for (let j=0;j<p;j++) A[j][j]+=1e-6;
+  for (let i=0;i<p;i++) {
+    let mx=i; for(let j=i+1;j<p;j++) if(Math.abs(A[j][i])>Math.abs(A[mx][i])) mx=j;
+    [A[i],A[mx]]=[A[mx],A[i]]; if(Math.abs(A[i][i])<1e-12) continue;
+    for(let j=i+1;j<p;j++){const f=A[j][i]/A[i][i];for(let k=i;k<=p;k++)A[j][k]-=f*A[i][k];}
+  }
+  const beta=new Array(p).fill(0);
+  for(let i=p-1;i>=0;i--){beta[i]=A[i][p];for(let j=i+1;j<p;j++)beta[i]-=A[i][j]*beta[j];beta[i]/=A[i][i]||1;}
+  const predictions=[], residuals=[];
+  let rss=0, tss=0;
+  const tgtMean = target.reduce((s,v)=>s+v,0)/m;
+  for(let i=0;i<m;i++){
+    let pred=0; for(let j=0;j<p;j++) pred+=features[i][j]*beta[j];
+    predictions.push(pred);
+    const resid = target[i]-pred;
+    residuals.push(resid);
+    rss += resid*resid;
+    tss += (target[i]-tgtMean)**2;
+  }
+  return {beta, predictions, residuals, rss:rss/m, tss:tss/m, r2: tss>0 ? 1-rss/tss : 0};
+}
+
+// Helper: compute correlation between two arrays
+function pearsonCorr(a, b) {
+  const n = Math.min(a.length, b.length);
+  const ma = a.slice(0,n).reduce((s,v)=>s+v,0)/n;
+  const mb = b.slice(0,n).reduce((s,v)=>s+v,0)/n;
+  let num=0, da=0, db=0;
+  for(let i=0;i<n;i++){num+=(a[i]-ma)*(b[i]-mb);da+=(a[i]-ma)**2;db+=(b[i]-mb)**2;}
+  return (da>0&&db>0) ? num/Math.sqrt(da*db) : 0;
+}
 
 function CausalTab() {
   const [causalType, setCausalType] = useState("linear");
@@ -3084,99 +3137,302 @@ function CausalTab() {
   const [nPts, setNPts] = useState(300);
   const [signals, setSignals] = useState(null);
   const [results, setResults] = useState(null);
+  const [steps, setSteps] = useState(null);
   const [running, setRunning] = useState(false);
   const [expandedConcept, setExpandedConcept] = useState(null);
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [autoPlay, setAutoPlay] = useState(false);
+  // Live feed causal mode
+  const [feedMode, setFeedMode] = useState("synthetic"); // synthetic | live
+  const [livePair, setLivePair] = useState(null);
+  const [loadingFeed, setLoadingFeed] = useState(false);
+
+  // Auto-advance steps
+  useEffect(() => {
+    if (!autoPlay || !steps || currentStep >= steps.length - 1) { setAutoPlay(false); return; }
+    const timer = setTimeout(() => setCurrentStep(s => s + 1), 1500);
+    return () => clearTimeout(timer);
+  }, [autoPlay, currentStep, steps]);
+
+  // Load live feed pair for causal analysis
+  const loadLivePair = useCallback(async (feedA, feedB) => {
+    setLoadingFeed(true);
+    try {
+      const [respA, respB] = await Promise.all([fetch(feedA.url), fetch(feedB.url)]);
+      const [jsonA, jsonB] = await Promise.all([respA.json(), respB.json()]);
+      const parsedA = feedA.parse(jsonA), parsedB = feedB.parse(jsonB);
+      const vA = parsedA.values.filter(v => v != null && isFinite(v));
+      const vB = parsedB.values.filter(v => v != null && isFinite(v));
+      const n = Math.min(vA.length, vB.length, 800);
+      setSignals({ x: vA.slice(0, n), y: vB.slice(0, n) });
+      setLivePair({ nameA: parsedA.name || feedA.name, nameB: parsedB.name || feedB.name });
+      setSteps(null); setResults(null); setCurrentStep(-1);
+    } catch(e) { console.error(e); }
+    setLoadingFeed(false);
+  }, []);
 
   const runExperiment = useCallback(() => {
     setRunning(true);
     setTimeout(() => {
-      const n = nPts;
-      const x = Array.from({ length: n }, () => gaussianRandom());
-      const y = new Array(n).fill(0);
-      if (causalType === "linear") {
-        for (let t = delay; t < n; t++) y[t] = 0.7 * x[t - delay] + noise * gaussianRandom();
-      } else if (causalType === "nonlinear") {
-        for (let t = delay; t < n; t++) y[t] = 0.6 * Math.sin(2.5 * x[t - delay]) + 0.3 * x[t - delay] * x[t - delay] + noise * gaussianRandom();
-      } else if (causalType === "none") {
-        for (let t = 0; t < n; t++) y[t] = gaussianRandom();
-      } else if (causalType === "bidirectional") {
-        for (let t = delay; t < n; t++) {
-          y[t] = 0.5 * x[t - delay] + noise * gaussianRandom();
-          if (t >= delay * 2) x[t] = x[t] * 0.5 + 0.3 * y[t - delay] + noise * 0.5 * gaussianRandom();
+      let x, y;
+      if (feedMode === "live" && signals) {
+        x = signals.x; y = signals.y;
+      } else {
+        const n = nPts;
+        x = Array.from({length:n}, () => gaussianRandom());
+        y = new Array(n).fill(0);
+        if (causalType === "linear") {
+          for (let t=delay;t<n;t++) y[t] = 0.7*x[t-delay] + noise*gaussianRandom();
+        } else if (causalType === "nonlinear") {
+          for (let t=delay;t<n;t++) y[t] = 0.6*Math.sin(2.5*x[t-delay]) + 0.3*x[t-delay]*x[t-delay] + noise*gaussianRandom();
+        } else if (causalType === "none") {
+          for (let t=0;t<n;t++) y[t] = gaussianRandom();
+        } else if (causalType === "bidirectional") {
+          for (let t=delay;t<n;t++) {
+            y[t] = 0.5*x[t-delay] + noise*gaussianRandom();
+            if (t>=delay*2) x[t] = x[t]*0.5 + 0.3*y[t-delay] + noise*0.5*gaussianRandom();
+          }
         }
+        setSignals({x, y});
       }
-      setSignals({ x, y });
-      const lags = Math.max(delay + 2, 5);
-      const linXY = grangerTest(x, y, lags);
-      const linYX = grangerTest(y, x, lags);
+
+      const lags = Math.max(delay+2, 5);
+      const n = Math.min(x.length, y.length);
+
+      // ═══ Build the 10-step numerical walkthrough ═══
+      const stepData = [];
+
+      // Step 0: The concrete problem
+      stepData.push({
+        id:0, title:"The Concrete Problem",
+        math:"Observe X_t, Y_t. Does Y → X?",
+        desc:"We observe two signals and want to determine if knowing Y's past improves prediction of X's future.",
+        color:T.text0,
+        data:{ xSample:x.slice(0,80), ySample:y.slice(0,80), n }
+      });
+
+      // Step 1: Build Predictor A (X only) and Predictor B (X+Y)
+      const target=[], featR=[], featU=[];
+      for (let t=lags;t<n;t++) {
+        target.push(x[t]);
+        const xL=[], xyL=[];
+        for(let l=1;l<=lags;l++){xL.push(x[t-l]); xyL.push(x[t-l]);}
+        for(let l=1;l<=lags;l++){xyL.push(y[t-l]);}
+        featR.push(xL); featU.push(xyL);
+      }
+
+      stepData.push({
+        id:1, title:"Build Predictor Spaces",
+        math:"H_X = span{X_{t-1},...,X_{t-L}}  vs  H_{X,Y} = span{X_{t-1},...,Y_{t-L}}",
+        desc:`Predictor A uses only ${lags} lags of X. Predictor B uses ${lags} lags of X AND ${lags} lags of Y. If B does better, Y carries causal information.`,
+        color:T.blue,
+        data:{ lags, featRDims:[target.length, featR[0].length], featUDims:[target.length, featU[0].length],
+               sampleR:featR.slice(0,5).map(r=>r.map(v=>v.toFixed(3))),
+               sampleU:featU.slice(0,3).map(r=>r.map(v=>v.toFixed(3))) }
+      });
+
+      // Step 2: Compute projections (OLS)
+      const restricted = olsDetailed(target, featR);
+      const unrestricted = olsDetailed(target, featU);
+
+      stepData.push({
+        id:2, title:"Compute Best Predictions (Projections)",
+        math:"X̂ = P_H(X_{t+1}) — orthogonal projection onto past subspace",
+        desc:`Restricted model (X only): R²=${restricted.r2.toFixed(4)}, RSS=${restricted.rss.toFixed(4)}. Unrestricted model (X+Y): R²=${unrestricted.r2.toFixed(4)}, RSS=${unrestricted.rss.toFixed(4)}.`,
+        color:T.blue,
+        data:{
+          betaR:restricted.beta.slice(0,lags).map(v=>v.toFixed(4)),
+          betaU_X:unrestricted.beta.slice(0,lags).map(v=>v.toFixed(4)),
+          betaU_Y:unrestricted.beta.slice(lags).map(v=>v.toFixed(4)),
+          predsR:restricted.predictions.slice(0,100),
+          predsU:unrestricted.predictions.slice(0,100),
+          actual:target.slice(0,100),
+          rssR:restricted.rss, rssU:unrestricted.rss,
+          r2R:restricted.r2, r2U:unrestricted.r2,
+        }
+      });
+
+      // Step 3: Compute innovations (residuals)
+      stepData.push({
+        id:3, title:"Compute Innovation (Residual)",
+        math:"ε_{t+1} = X_{t+1} − P_H(X_{t+1}) — the unpredictable part",
+        desc:`Residual is orthogonal to the past. It is the irreducible uncertainty. Restricted residual σ=${Math.sqrt(restricted.rss).toFixed(4)}, Unrestricted residual σ=${Math.sqrt(unrestricted.rss).toFixed(4)}.`,
+        color:T.orange,
+        data:{
+          residR:restricted.residuals.slice(0,100),
+          residU:unrestricted.residuals.slice(0,100),
+          residR_std: Math.sqrt(restricted.rss),
+          residU_std: Math.sqrt(unrestricted.rss),
+        }
+      });
+
+      // Step 4: Test orthogonality — does residual correlate with Y?
+      const yLagged = [];
+      for (let t=lags;t<n;t++) yLagged.push(y[t-1]);
+      const corrResidY = pearsonCorr(restricted.residuals, yLagged);
+      const corrResidY_U = pearsonCorr(unrestricted.residuals, yLagged);
+
+      stepData.push({
+        id:4, title:"Test Orthogonality — Does Y Predict the Residual?",
+        math:"⟨ε^(X)_{t+1}, Y_t⟩ ≠ 0  ⟹  Y causes X",
+        desc:`Corr(restricted residual, Y_{t-1}) = ${corrResidY.toFixed(4)}. ${Math.abs(corrResidY) > 0.05 ? "Non-zero! Y contains information about X's future." : "Near zero — Y adds no new information."} After adding Y to the model: Corr(unrestricted residual, Y_{t-1}) = ${corrResidY_U.toFixed(4)} (should be ~0 if model absorbed the signal).`,
+        color: Math.abs(corrResidY) > 0.05 ? T.green : T.text3,
+        data:{ corrResidY, corrResidY_U, isCausal: Math.abs(corrResidY) > 0.05 }
+      });
+
+      // Step 5: Reduction in residual energy — the causal test statistic
+      const reduction = restricted.rss > 0 ? 1 - unrestricted.rss/restricted.rss : 0;
+      const fStat = lags > 0 ? ((restricted.rss-unrestricted.rss)/lags)/(unrestricted.rss/Math.max(1,target.length-2*lags-1)) : 0;
+
+      stepData.push({
+        id:5, title:"Residual Energy Reduction = Granger Causality",
+        math:"Y→X ⟺ ‖ε^(X,Y)‖ < ‖ε^(X)‖ — pure geometry of distances",
+        desc:`Adding Y reduced prediction error by ${(reduction*100).toFixed(2)}%. F-statistic = ${fStat.toFixed(2)}. This is the classical Granger test — completely equivalent to comparing projection residuals in L² Hilbert space.`,
+        color: reduction > 0.05 ? T.green : T.text3,
+        data:{ reduction, fStat, rssR:restricted.rss, rssU:unrestricted.rss }
+      });
+
+      // Step 6: Why linear fails on nonlinear data — motivate RKHS
+      stepData.push({
+        id:6, title:"Nonlinear Signals Break Linear Projections",
+        math:"X_{t+1} = sin(Y_t) + Y²_t + ε — linear P_H cannot see this",
+        desc: causalType === "nonlinear"
+          ? `This experiment uses a nonlinear relationship. Linear Granger found ${(reduction*100).toFixed(1)}% reduction — it may miss the full causal signal. We need a bigger Hilbert space.`
+          : `In this experiment the relationship is ${causalType}. Linear projection ${reduction > 0.05 ? "was sufficient" : "found nothing"}.`,
+        color:T.orange,
+        data:{ causalType, linearReduction: reduction }
+      });
+
+      // Step 7: RKHS lift — kernel Granger
       const kXY = kernelGrangerTest(x, y, lags);
       const kYX = kernelGrangerTest(y, x, lags);
-      const hXY = hsicTest(x.slice(delay), y.slice(delay));
-      setResults({ linXY, linYX, kXY, kYX, hXY });
-      setRunning(false);
-    }, 50);
-  }, [causalType, delay, noise, nPts]);
 
-  const conceptColor = id => (HILBERT_CONCEPTS.find(c => c.id === id) || {}).color || T.text3;
-  const labelS = { fontFamily: T.mono, fontSize: "0.55rem", color: T.text3, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 };
-  const statS = { fontFamily: T.mono, fontSize: "0.72rem" };
+      stepData.push({
+        id:7, title:"Lift into RKHS — Kernel Granger Causality",
+        math:"φ(x) ∈ H_k,  k(x,y) = exp(−‖x−y‖²/2σ²) — RBF kernel",
+        desc:`Kernel bandwidth σ=${kXY.sigma.toFixed(3)} (median heuristic). X→Y kernel reduction: ${(kXY.reduction*100).toFixed(1)}%. Y→X kernel reduction: ${(kYX.reduction*100).toFixed(1)}%. Nonlinear projections in RKHS can detect causal links invisible to linear methods.`,
+        color:T.orange,
+        data:{ kXY, kYX }
+      });
+
+      // Step 8: HSIC — cross-covariance operator norm
+      const hXY = hsicTest(x.slice(lags), y.slice(lags));
+      const hYX = hsicTest(y.slice(lags), x.slice(lags));
+
+      stepData.push({
+        id:8, title:"Cross-Covariance Operator — HSIC",
+        math:"‖C_XY‖²_HS = ‖E[φ(X)⊗ψ(Y)]‖² — if 0, independent",
+        desc:`HSIC(X,Y) = ${hXY.hsic.toFixed(6)}. ${hXY.hsic > 0.01 ? "Strong" : hXY.hsic > 0.001 ? "Weak" : "No"} dependence. This measures ALL dependence (linear + nonlinear) via the Hilbert-Schmidt norm of the cross-covariance operator.`,
+        color: hXY.hsic > 0.001 ? T.teal : T.text3,
+        data:{ hXY, hYX }
+      });
+
+      // Step 9: Time direction emerges
+      stepData.push({
+        id:9, title:"Time Direction Emerges Automatically",
+        math:"H_{t-2} ⊂ H_{t-1} ⊂ H_t — nested past subspaces",
+        desc:`Forward (X→Y): linear ${(reduction*100).toFixed(1)}%, kernel ${(kXY.reduction*100).toFixed(1)}%. Reverse (Y→X): linear ${(grangerTest(y,x,lags).reduction*100).toFixed(1)}%, kernel ${(kYX.reduction*100).toFixed(1)}%. The asymmetry in residual reduction IS the arrow of causation — no direction imposed, it emerges from projecting onto past-only subspaces.`,
+        color:T.purple,
+        data:{ fwd:{lin:reduction, ker:kXY.reduction}, rev:{lin:grangerTest(y,x,lags).reduction, ker:kYX.reduction} }
+      });
+
+      // Step 10: Summary verdict
+      const linFwd=reduction>0.05, kerFwd=kXY.reduction>0.05;
+      const linRev=grangerTest(y,x,lags).reduction>0.05, kerRev=kYX.reduction>0.05;
+      let verdict="";
+      if(linFwd && kerFwd) verdict="Strong X→Y causation (linear + nonlinear)";
+      else if(!linFwd && kerFwd) verdict="Nonlinear X→Y causation (only visible in RKHS)";
+      else if(linFwd) verdict="Linear X→Y causation";
+      else verdict="No X→Y causation detected";
+      if(linRev||kerRev) verdict += `. Reverse Y→X also present (${linRev?"linear":""}${linRev&&kerRev?"+":""}${kerRev?"kernel":""})`;
+
+      stepData.push({
+        id:10, title:"Verdict — Geometry of Information",
+        math:"Causal discovery = which variables change the orthogonal decomposition of future information",
+        desc: verdict,
+        color: (linFwd||kerFwd) ? T.green : T.text3,
+        data:{ verdict, linFwd, kerFwd, linRev, kerRev, hsic:hXY.hsic }
+      });
+
+      setSteps(stepData);
+      setResults({
+        linXY:{reduction, fStat, rssR:restricted.rss, rssU:unrestricted.rss, n:target.length},
+        linYX:grangerTest(y,x,lags), kXY, kYX, hXY
+      });
+      setCurrentStep(0);
+      setRunning(false);
+    }, 80);
+  }, [causalType, delay, noise, nPts, feedMode, signals]);
+
+  const labelS = { fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
+  const statS = { fontFamily:T.mono, fontSize:"0.72rem" };
+
+  // Pairs for live feed causal analysis
+  const livePairs = [
+    { label:"Berlin Temp → NYC Temp", a:LIVE_FEEDS[0], b:LIVE_FEEDS[1] },
+    { label:"BTC → ETH (crypto coupling)", a:LIVE_FEEDS[8], b:LIVE_FEEDS[9] },
+    { label:"BTC → SOL", a:LIVE_FEEDS[8], b:LIVE_FEEDS[10] },
+    { label:"ETH → SOL", a:LIVE_FEEDS[9], b:LIVE_FEEDS[10] },
+    { label:"Berlin Wind → Berlin Temp", a:LIVE_FEEDS[4], b:LIVE_FEEDS[0] },
+    { label:"Tokyo Temp → Sydney Temp", a:LIVE_FEEDS[2], b:LIVE_FEEDS[3] },
+    { label:"Reykjavik Pressure → London Rain", a:LIVE_FEEDS[7], b:LIVE_FEEDS[5] },
+  ];
 
   return (
     <div>
-      {/* Hilbert Concepts Reference */}
+      {/* ═══ Compact Hilbert ↔ Causality Reference ═══ */}
       <Section title="Hilbert Space ↔ Causality" count={HILBERT_CONCEPTS.length} color={T.purple}>
-        <div style={{ fontFamily: T.body, fontSize: "0.72rem", color: T.text2, marginBottom: 12, lineHeight: 1.6 }}>
-          A variable <strong style={{ color: T.text0 }}>causes</strong> another if adding it <strong style={{ color: T.text0 }}>changes the orthogonal decomposition</strong> of future information.
-          Modern causal discovery operates in Hilbert spaces — often infinite-dimensional ones — even when data look raw and discrete.
+        <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:12, lineHeight:1.6 }}>
+          Causal discovery is <strong style={{color:T.text0}}>geometry of information</strong>: which variables change the orthogonal decomposition of future information?
+          All methods differ only by what Hilbert space they embed into, how they approximate projections, and how they test orthogonality.
         </div>
-        {/* Summary table */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px,1fr))", gap:6, marginBottom:12 }}>
           {[
-            { concept: "Prediction", hilbert: "Projection P_H", color: T.blue },
-            { concept: "Independence", hilbert: "Orthogonality X ⊥ Y", color: T.green },
-            { concept: "Causality", hilbert: "Subspace expansion", color: T.orange },
-            { concept: "Multimodal fusion", hilbert: "Tensor factorization ⊗", color: T.crimson },
-            { concept: "Nonlinear relations", hilbert: "RKHS lifting φ(x)", color: T.orange },
-            { concept: "Time direction", hilbert: "Spectral asymmetry S(ω)", color: T.purple },
-          ].map((r, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", background: T.bg3, borderRadius: T.rSm }}>
+            {concept:"Prediction", hilbert:"Projection P_H", color:T.blue},
+            {concept:"Independence", hilbert:"Orthogonality", color:T.green},
+            {concept:"Causality", hilbert:"Subspace expansion", color:T.orange},
+            {concept:"Nonlinearity", hilbert:"RKHS lift φ(x)", color:T.orange},
+            {concept:"Total dependence", hilbert:"‖C_XY‖_HS", color:T.teal},
+            {concept:"Time direction", hilbert:"Nested H_{t-1}⊂H_t", color:T.purple},
+          ].map((r,i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 8px", background:T.bg3, borderRadius:T.rSm }}>
               <StatusDot color={r.color} size={5} />
-              <span style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text1, flex: 1 }}>{r.concept}</span>
-              <span style={{ fontFamily: T.mono, fontSize: "0.62rem", color: r.color }}>= {r.hilbert}</span>
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, flex:1 }}>{r.concept}</span>
+              <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:r.color }}>= {r.hilbert}</span>
             </div>
           ))}
         </div>
         {/* Expandable concept cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
           {HILBERT_CONCEPTS.map(hc => {
             const isOpen = expandedConcept === hc.id;
             return (
-              <div key={hc.id} style={{ background: T.bg2, border: `1px solid ${T.border0}`, borderRadius: T.rMd, overflow: "hidden", borderLeft: `3px solid ${hc.color}` }}>
-                <div onClick={() => setExpandedConcept(isOpen ? null : hc.id)} style={{ padding: "8px 10px", cursor: "pointer" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontFamily: T.mono, fontSize: "0.72rem", fontWeight: 600, color: hc.color }}>{hc.symbol}</span>
-                    <span style={{ fontFamily: T.display, fontWeight: 700, fontSize: "0.82rem", color: T.text0, flex: 1 }}>{hc.name}</span>
+              <div key={hc.id} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden", borderLeft:`3px solid ${hc.color}` }}>
+                <div onClick={() => setExpandedConcept(isOpen ? null : hc.id)} style={{ padding:"8px 10px", cursor:"pointer" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:hc.color }}>{hc.symbol}</span>
+                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.82rem", color:T.text0, flex:1 }}>{hc.name}</span>
                     <Badge color={hc.color}>{hc.techniques.length}</Badge>
-                    <span style={{ fontFamily: T.mono, fontSize: "0.6rem", color: T.text3, transform: isOpen ? "rotate(90deg)" : "rotate(0)", transition: "transform 0.2s" }}>▸</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)", transition:"transform 0.2s" }}>▸</span>
                   </div>
-                  <div style={{ fontFamily: T.body, fontSize: "0.68rem", color: T.text2, marginTop: 4 }}>{hc.description}</div>
+                  <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:4 }}>{hc.description}</div>
                 </div>
-                <div style={{ maxHeight: isOpen ? 400 : 0, overflow: "hidden", transition: "max-height 0.3s ease" }}>
-                  <div style={{ padding: "0 10px 10px", borderTop: `1px solid ${T.border0}` }}>
-                    <div style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text1, padding: "8px 0 6px" }}>
-                      <span style={{ color: T.text3 }}>Hilbert: </span>{hc.hilbertMeaning}
+                <div style={{ maxHeight:isOpen?400:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
+                  <div style={{ padding:"0 10px 10px", borderTop:`1px solid ${T.border0}` }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, padding:"8px 0 6px" }}>
+                      <span style={{color:T.text3}}>Hilbert: </span>{hc.hilbertMeaning}
                     </div>
-                    <div style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text1, paddingBottom: 8, borderBottom: `1px dashed ${T.border0}` }}>
-                      <span style={{ color: T.text3 }}>Causal role: </span>{hc.causalRole}
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1, paddingBottom:8, borderBottom:`1px dashed ${T.border0}` }}>
+                      <span style={{color:T.text3}}>Causal role: </span>{hc.causalRole}
                     </div>
-                    <div style={{ marginTop: 8 }}>
+                    <div style={{ marginTop:8 }}>
                       <div style={labelS}>Techniques using this structure</div>
-                      <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                      <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
                         {hc.techniques.map(tid => {
-                          const t = TECHNIQUES.find(x => x.id === tid);
+                          const t=TECHNIQUES.find(x=>x.id===tid);
                           return t ? (
-                            <span key={tid} style={{ fontFamily: T.mono, fontSize: "0.6rem", padding: "0.12em 0.4em", borderRadius: T.rSm,
-                              background: `${familyColor(t.family)}15`, color: familyColor(t.family), border: `1px solid ${familyColor(t.family)}28` }}>
+                            <span key={tid} style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.12em 0.4em", borderRadius:T.rSm,
+                              background:`${familyColor(t.family)}15`, color:familyColor(t.family), border:`1px solid ${familyColor(t.family)}28` }}>
                               {t.name}
                             </span>
                           ) : null;
@@ -3191,184 +3447,308 @@ function CausalTab() {
         </div>
       </Section>
 
-      {/* Causal Detection Lab */}
-      <Section title="Causal Detection Lab" color={T.orange} style={{ marginTop: 12 }}>
-        <div style={{ fontFamily: T.body, fontSize: "0.72rem", color: T.text2, marginBottom: 12, lineHeight: 1.6 }}>
-          Generate paired signals with known causal structure, then run <strong style={{ color: T.blue }}>linear Granger</strong> (projection in L²)
-          and <strong style={{ color: T.orange }}>kernel Granger</strong> (projection in RKHS) tests.
-          The <strong style={{ color: T.teal }}>HSIC</strong> measures total dependence via cross-covariance operator norm.
+      {/* ═══ CAUSAL DISCOVERY MACHINE ═══ */}
+      <Section title="Causal Discovery Machine" color={T.orange} style={{ marginTop:12 }}>
+        <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:12, lineHeight:1.6 }}>
+          Step-by-step numerical walkthrough: data → predictor spaces → projections → residuals → orthogonality test → verdict.
+          Uses <strong style={{color:T.blue}}>linear Granger</strong> (L² projection),
+          <strong style={{color:T.orange}}> kernel Granger</strong> (RKHS projection), and
+          <strong style={{color:T.teal}}> HSIC</strong> (cross-covariance operator norm).
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 8, marginBottom: 12 }}>
-          <div>
-            <div style={labelS}>Causal Structure</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {[["linear", "X→Y linear"], ["nonlinear", "X→Y nonlinear"], ["none", "Independent"], ["bidirectional", "X↔Y mutual"]].map(([k, l]) => (
-                <button key={k} onClick={() => setCausalType(k)} style={{
-                  fontFamily: T.mono, fontSize: "0.62rem", padding: "4px 8px", borderRadius: T.rSm, cursor: "pointer", textAlign: "left",
-                  background: causalType === k ? T.orangeDim : T.bg3, border: `1px solid ${causalType === k ? T.orange : T.border0}`,
-                  color: causalType === k ? T.orange : T.text2,
-                }}>{l}</button>
-              ))}
+
+        {/* Data source toggle */}
+        <div style={{ display:"flex", gap:4, marginBottom:12 }}>
+          <button onClick={() => setFeedMode("synthetic")} style={{
+            fontFamily:T.mono, fontSize:T.fs.xs, padding:"6px 14px", borderRadius:T.rSm, cursor:"pointer",
+            background:feedMode==="synthetic"?T.orangeDim:T.bg3, border:`1px solid ${feedMode==="synthetic"?T.orange:T.border0}`,
+            color:feedMode==="synthetic"?T.orange:T.text2, fontWeight:feedMode==="synthetic"?600:400,
+          }}>Synthetic Signals</button>
+          <button onClick={() => setFeedMode("live")} style={{
+            fontFamily:T.mono, fontSize:T.fs.xs, padding:"6px 14px", borderRadius:T.rSm, cursor:"pointer",
+            background:feedMode==="live"?T.blueDim:T.bg3, border:`1px solid ${feedMode==="live"?T.blue:T.border0}`,
+            color:feedMode==="live"?T.blue:T.text2, fontWeight:feedMode==="live"?600:400,
+          }}>Live Data Feeds</button>
+        </div>
+
+        {feedMode === "synthetic" ? (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(160px,1fr))", gap:8, marginBottom:12 }}>
+            <div>
+              <div style={labelS}>Causal Structure</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+                {[["linear","X→Y linear"],["nonlinear","X→Y nonlinear"],["none","Independent"],["bidirectional","X↔Y mutual"]].map(([k,l]) => (
+                  <button key={k} onClick={() => setCausalType(k)} style={{
+                    fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 8px", borderRadius:T.rSm, cursor:"pointer", textAlign:"left",
+                    background:causalType===k?T.orangeDim:T.bg3, border:`1px solid ${causalType===k?T.orange:T.border0}`,
+                    color:causalType===k?T.orange:T.text2,
+                  }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={labelS}>Delay (lags)</div>
+              <input type="range" min={1} max={10} value={delay} onChange={e=>setDelay(+e.target.value)} style={{width:"100%"}} />
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, textAlign:"center" }}>{delay}</div>
+            </div>
+            <div>
+              <div style={labelS}>Noise σ</div>
+              <input type="range" min={0} max={2} step={0.1} value={noise} onChange={e=>setNoise(+e.target.value)} style={{width:"100%"}} />
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, textAlign:"center" }}>{noise.toFixed(1)}</div>
+            </div>
+            <div>
+              <div style={labelS}>Sample size</div>
+              <input type="range" min={100} max={800} step={50} value={nPts} onChange={e=>setNPts(+e.target.value)} style={{width:"100%"}} />
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, textAlign:"center" }}>{nPts}</div>
             </div>
           </div>
-          <div>
-            <div style={labelS}>Delay (lags)</div>
-            <input type="range" min={1} max={10} value={delay} onChange={e => setDelay(+e.target.value)} style={{ width: "100%" }} />
-            <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.text0, textAlign: "center" }}>{delay}</div>
+        ) : (
+          <div style={{ marginBottom:12 }}>
+            <div style={labelS}>Select signal pair for causal analysis</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px,1fr))", gap:6 }}>
+              {livePairs.map((lp,i) => (
+                <button key={i} onClick={() => loadLivePair(lp.a, lp.b)} style={{
+                  fontFamily:T.mono, fontSize:T.fs.xs, padding:"8px 10px", borderRadius:T.rSm, cursor:"pointer", textAlign:"left",
+                  background:livePair && livePair.nameA===(lp.a.parse ? lp.a.name : lp.label) ? T.blueDim : T.bg3,
+                  border:`1px solid ${T.border0}`, borderLeft:`3px solid ${T.blue}`, display:"block", width:"100%",
+                }}>
+                  <div style={{ color:T.text0, fontWeight:600 }}>{lp.label}</div>
+                  <div style={{ fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>Real-time data via API</div>
+                </button>
+              ))}
+            </div>
+            {loadingFeed && <div style={{ padding:"12px 0", fontFamily:T.mono, fontSize:"0.72rem", color:T.blue }}><StatusDot color={T.blue} pulse size={8} /> Fetching live data...</div>}
           </div>
-          <div>
-            <div style={labelS}>Noise σ</div>
-            <input type="range" min={0} max={2} step={0.1} value={noise} onChange={e => setNoise(+e.target.value)} style={{ width: "100%" }} />
-            <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.text0, textAlign: "center" }}>{noise.toFixed(1)}</div>
-          </div>
-          <div>
-            <div style={labelS}>Sample size</div>
-            <input type="range" min={100} max={800} step={50} value={nPts} onChange={e => setNPts(+e.target.value)} style={{ width: "100%" }} />
-            <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.text0, textAlign: "center" }}>{nPts}</div>
-          </div>
+        )}
+
+        {/* Run button */}
+        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
+          <button onClick={runExperiment} disabled={running || (feedMode==="live" && !signals)} style={{
+            fontFamily:T.mono, fontSize:"0.72rem", padding:"8px 20px", borderRadius:T.rMd, cursor:running?"wait":"pointer",
+            background:T.orangeDim, border:`1px solid ${T.orange}44`, color:T.orange, fontWeight:600,
+          }}>{running ? "Computing projections..." : "▶ Run Full Causal Analysis"}</button>
+          {steps && (
+            <React.Fragment>
+              <button onClick={() => {setCurrentStep(0);setAutoPlay(true);}} style={{
+                fontFamily:T.mono, fontSize:T.fs.xs, padding:"6px 12px", borderRadius:T.rSm, cursor:"pointer",
+                background:T.greenDim, border:`1px solid ${T.green}44`, color:T.green,
+              }}>▶ Auto-play Steps</button>
+              <button onClick={() => setCurrentStep(steps.length-1)} style={{
+                fontFamily:T.mono, fontSize:T.fs.xs, padding:"6px 12px", borderRadius:T.rSm, cursor:"pointer",
+                background:T.bg3, border:`1px solid ${T.border1}`, color:T.text2,
+              }}>Skip to Verdict</button>
+            </React.Fragment>
+          )}
         </div>
-        <button onClick={runExperiment} disabled={running} style={{
-          fontFamily: T.mono, fontSize: "0.72rem", padding: "8px 20px", borderRadius: T.rMd, cursor: running ? "wait" : "pointer",
-          background: T.orangeDim, border: `1px solid ${T.orange}44`, color: T.orange, fontWeight: 600, marginBottom: 12,
-        }}>{running ? "Computing projections..." : "▶ Run Causal Experiment"}</button>
 
         {/* Signal display */}
         {signals && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div style={{ background: T.bg3, padding: "8px 10px", borderRadius: T.rSm }}>
-              <div style={labelS}>X (driver)</div>
-              <Sparkline data={signals.x} width={400} height={50} color={T.blue} filled showRange />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+            <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+              <div style={labelS}>{livePair ? livePair.nameA : "X (driver)"}</div>
+              <Sparkline data={signals.x.slice(0,400)} width={450} height={50} color={T.blue} filled showRange />
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>n={signals.x.length} · μ={((signals.x.reduce((s,v)=>s+v,0))/signals.x.length).toFixed(2)} · σ={Math.sqrt(signals.x.reduce((s,v)=>s+(v-(signals.x.reduce((a,b)=>a+b,0)/signals.x.length))**2,0)/signals.x.length).toFixed(2)}</div>
             </div>
-            <div style={{ background: T.bg3, padding: "8px 10px", borderRadius: T.rSm }}>
-              <div style={labelS}>Y (response)</div>
-              <Sparkline data={signals.y} width={400} height={50} color={T.orange} filled showRange />
+            <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+              <div style={labelS}>{livePair ? livePair.nameB : "Y (response)"}</div>
+              <Sparkline data={signals.y.slice(0,400)} width={450} height={50} color={T.orange} filled showRange />
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>n={signals.y.length} · μ={((signals.y.reduce((s,v)=>s+v,0))/signals.y.length).toFixed(2)} · σ={Math.sqrt(signals.y.reduce((s,v)=>s+(v-(signals.y.reduce((a,b)=>a+b,0)/signals.y.length))**2,0)/signals.y.length).toFixed(2)}</div>
             </div>
           </div>
         )}
 
-        {/* Results */}
-        {results && (
-          <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-              {/* Linear Granger */}
-              <div style={{ background: T.bg2, border: `1px solid ${T.border0}`, borderRadius: T.rMd, padding: "10px 12px", borderLeft: `3px solid ${T.blue}` }}>
-                <div style={{ ...labelS, color: T.blue }}>Linear Granger (L² projection)</div>
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginBottom: 2 }}>X → Y</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <ProgressBar value={Math.abs(results.linXY.reduction)} color={results.linXY.reduction > 0.05 ? T.green : T.text3} thick />
-                    <span style={{ ...statS, color: results.linXY.reduction > 0.05 ? T.green : T.text3, fontWeight: 700, minWidth: 50 }}>
-                      {(results.linXY.reduction * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3 }}>F={results.linXY.fStat.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginBottom: 2 }}>Y → X</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <ProgressBar value={Math.abs(results.linYX.reduction)} color={results.linYX.reduction > 0.05 ? T.green : T.text3} thick />
-                    <span style={{ ...statS, color: results.linYX.reduction > 0.05 ? T.green : T.text3, fontWeight: 700, minWidth: 50 }}>
-                      {(results.linYX.reduction * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3 }}>F={results.linYX.fStat.toFixed(2)}</div>
-                </div>
-                <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.blue, marginTop: 8, fontStyle: "italic" }}>
-                  {"P_{H_X}(X_{t+1})"}: adding Y lags shrinks residual by {(results.linXY.reduction * 100).toFixed(1)}%
-                </div>
-              </div>
-
-              {/* Kernel Granger */}
-              <div style={{ background: T.bg2, border: `1px solid ${T.border0}`, borderRadius: T.rMd, padding: "10px 12px", borderLeft: `3px solid ${T.orange}` }}>
-                <div style={{ ...labelS, color: T.orange }}>Kernel Granger (RKHS projection)</div>
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginBottom: 2 }}>X → Y (kernel)</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <ProgressBar value={Math.abs(results.kXY.reduction)} color={results.kXY.reduction > 0.05 ? T.green : T.text3} thick />
-                    <span style={{ ...statS, color: results.kXY.reduction > 0.05 ? T.green : T.text3, fontWeight: 700, minWidth: 50 }}>
-                      {(results.kXY.reduction * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3 }}>σ={results.kXY.sigma.toFixed(2)}, n={results.kXY.n}</div>
-                </div>
-                <div>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginBottom: 2 }}>Y → X (kernel)</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <ProgressBar value={Math.abs(results.kYX.reduction)} color={results.kYX.reduction > 0.05 ? T.green : T.text3} thick />
-                    <span style={{ ...statS, color: results.kYX.reduction > 0.05 ? T.green : T.text3, fontWeight: 700, minWidth: 50 }}>
-                      {(results.kYX.reduction * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-                <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.orange, marginTop: 8, fontStyle: "italic" }}>
-                  φ(x) ∈ H: lifts nonlinear f(X) into RKHS where projection detects causal links
-                </div>
-              </div>
-
-              {/* HSIC */}
-              <div style={{ background: T.bg2, border: `1px solid ${T.border0}`, borderRadius: T.rMd, padding: "10px 12px", borderLeft: `3px solid ${T.teal}` }}>
-                <div style={{ ...labelS, color: T.teal }}>HSIC (cross-covariance operator)</div>
-                <div style={{ fontFamily: T.display, fontWeight: 700, fontSize: "1.6rem", color: T.teal, lineHeight: 1 }}>
-                  {results.hXY.hsic.toFixed(6)}
-                </div>
-                <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.text3, marginBottom: 6 }}>
-                  n={results.hXY.n}, σ={results.hXY.sigma.toFixed(2)}
-                </div>
-                <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: results.hXY.hsic > 0.001 ? T.green : T.text3, marginBottom: 4 }}>
-                  {results.hXY.hsic > 0.01 ? "Strong dependence detected" :
-                   results.hXY.hsic > 0.001 ? "Weak dependence detected" : "Near-independent (‖C_XY‖ ≈ 0)"}
-                </div>
-                <div style={{ fontFamily: T.mono, fontSize: "0.55rem", color: T.teal, fontStyle: "italic" }}>
-                  ‖C_XY‖² = ‖E[φ(X)⊗ψ(Y)]‖² — measures all (including nonlinear) dependence
-                </div>
-              </div>
+        {/* ═══ STEP-BY-STEP WALKTHROUGH ═══ */}
+        {steps && (
+          <div style={{ marginTop:8 }}>
+            {/* Step navigation */}
+            <div style={{ display:"flex", gap:2, marginBottom:12, overflowX:"auto", paddingBottom:4 }}>
+              {steps.map((step,i) => (
+                <button key={i} onClick={() => {setCurrentStep(i);setAutoPlay(false);}} style={{
+                  fontFamily:T.mono, fontSize:T.fs.xs, padding:"4px 8px", borderRadius:T.rSm, cursor:"pointer",
+                  minWidth:28, textAlign:"center",
+                  background: i<=currentStep ? `${step.color}22` : T.bg3,
+                  border:`1px solid ${i===currentStep ? step.color : i<=currentStep ? `${step.color}44` : T.border0}`,
+                  color: i<=currentStep ? step.color : T.text3,
+                  fontWeight: i===currentStep ? 700 : 400,
+                }}>{i}</button>
+              ))}
             </div>
 
-            {/* Interpretation */}
-            <div style={{ background: T.bg3, border: `1px solid ${T.border0}`, borderRadius: T.rMd, padding: "10px 12px" }}>
-              <div style={labelS}>Causal Interpretation</div>
-              {(() => {
-                const linFwd = results.linXY.reduction > 0.05;
-                const linBck = results.linYX.reduction > 0.05;
-                const kerFwd = results.kXY.reduction > 0.05;
-                const kerBck = results.kYX.reduction > 0.05;
-                const lines = [];
-                if (linFwd && kerFwd) lines.push({ color: T.green, text: `X → Y: Both linear and kernel Granger detect forward causation (linear: ${(results.linXY.reduction*100).toFixed(1)}%, kernel: ${(results.kXY.reduction*100).toFixed(1)}%)` });
-                else if (!linFwd && kerFwd) lines.push({ color: T.orange, text: `X → Y: Only kernel Granger detects causation — relationship is nonlinear (RKHS lifting reveals structure invisible to L² projection)` });
-                else if (linFwd && !kerFwd) lines.push({ color: T.blue, text: `X → Y: Linear Granger detects causation (linear relationship confirmed)` });
-                else lines.push({ color: T.text3, text: `X → Y: No forward causation detected (adding Y does not shrink residual)` });
-                if (linBck || kerBck) lines.push({ color: T.yellow, text: `Y → X: Reverse causation ${linBck && kerBck ? "(linear + kernel)" : kerBck ? "(kernel only — nonlinear)" : "(linear)"} — ${causalType === "bidirectional" ? "expected for bidirectional" : "possible confounding or feedback"}` });
-                else lines.push({ color: T.text3, text: `Y → X: No reverse causation (correct for ${causalType === "none" ? "independent" : "unidirectional"} case)` });
-                return lines.map((l, i) => (
-                  <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", padding: "3px 0" }}>
-                    <StatusDot color={l.color} size={6} />
-                    <span style={{ fontFamily: T.mono, fontSize: "0.65rem", color: T.text1 }}>{l.text}</span>
+            {/* Visible steps */}
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {steps.slice(0, currentStep+1).map((step,idx) => {
+                const isActive = idx === currentStep;
+                return (
+                  <div key={step.id} style={{
+                    background:isActive ? T.bg3 : T.bg2,
+                    border:`1px solid ${isActive ? step.color : T.border0}`,
+                    borderRadius:T.rMd, overflow:"hidden",
+                    borderLeft:`3px solid ${step.color}`,
+                    opacity: isActive ? 1 : 0.7,
+                    transition:"opacity 0.3s, border-color 0.3s",
+                  }}>
+                    <div style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                        <Badge color={step.color}>{step.id}</Badge>
+                        <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.85rem", color:T.text0, flex:1 }}>{step.title}</span>
+                      </div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:step.color, marginBottom:4, padding:"4px 8px", background:`${step.color}0a`, borderRadius:T.rSm, display:"inline-block" }}>
+                        {step.math}
+                      </div>
+                      <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, lineHeight:1.5 }}>{step.desc}</div>
+
+                      {/* Step-specific visualizations */}
+                      {step.id === 0 && step.data && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                          <div><div style={labelS}>X sample (first 80)</div><Sparkline data={step.data.xSample} width={350} height={30} color={T.blue} /></div>
+                          <div><div style={labelS}>Y sample (first 80)</div><Sparkline data={step.data.ySample} width={350} height={30} color={T.orange} /></div>
+                        </div>
+                      )}
+                      {step.id === 1 && step.data && (
+                        <div style={{ marginTop:8 }}>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, marginBottom:4 }}>
+                            Restricted (X only): <span style={{color:T.blue}}>{step.data.featRDims[0]} obs × {step.data.featRDims[1]} features</span>
+                            &nbsp;| Unrestricted (X+Y): <span style={{color:T.orange}}>{step.data.featUDims[0]} obs × {step.data.featUDims[1]} features</span>
+                          </div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, background:T.bg2, padding:"4px 8px", borderRadius:T.rSm, overflowX:"auto", maxWidth:"100%" }}>
+                            Feature row [X_{"{t-1}"},...,X_{"{t-"+step.data.lags+"}"}]: [{step.data.sampleR[0]?.join(", ")}]
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 2 && step.data && (
+                        <div style={{ marginTop:8 }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                            <div>
+                              <div style={{...labelS, color:T.blue}}>Restricted Prediction (X only) — R²={step.data.r2R.toFixed(4)}</div>
+                              <Sparkline data={step.data.predsR} width={350} height={35} color={T.blue} />
+                              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>β_X = [{step.data.betaR.join(", ")}]</div>
+                            </div>
+                            <div>
+                              <div style={{...labelS, color:T.orange}}>Unrestricted Prediction (X+Y) — R²={step.data.r2U.toFixed(4)}</div>
+                              <Sparkline data={step.data.predsU} width={350} height={35} color={T.orange} />
+                              <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:2 }}>β_Y = [{step.data.betaU_Y.join(", ")}]</div>
+                            </div>
+                          </div>
+                          <div style={{ marginTop:4 }}><div style={labelS}>Actual target</div><Sparkline data={step.data.actual} width={720} height={25} color={T.text2} /></div>
+                        </div>
+                      )}
+                      {step.id === 3 && step.data && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                          <div>
+                            <div style={{...labelS, color:T.blue}}>ε restricted (σ={step.data.residR_std.toFixed(4)})</div>
+                            <Sparkline data={step.data.residR} width={350} height={35} color={T.blue} />
+                          </div>
+                          <div>
+                            <div style={{...labelS, color:T.orange}}>ε unrestricted (σ={step.data.residU_std.toFixed(4)})</div>
+                            <Sparkline data={step.data.residU} width={350} height={35} color={T.orange} />
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 4 && step.data && (
+                        <div style={{ marginTop:8, padding:"8px 12px", background:step.data.isCausal?T.greenDim:T.bg2, borderRadius:T.rSm, border:`1px solid ${step.data.isCausal?T.green:T.border0}33` }}>
+                          <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.isCausal?T.green:T.text3, fontWeight:700 }}>
+                            Corr(ε, Y) = {step.data.corrResidY.toFixed(4)} {step.data.isCausal?"→ CAUSAL SIGNAL DETECTED":"→ no signal"}
+                          </div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>
+                            After absorbing Y: Corr(ε_full, Y) = {step.data.corrResidY_U.toFixed(4)}
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 5 && step.data && (
+                        <div style={{ marginTop:8 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <div style={{ flex:1 }}>
+                              <ProgressBar value={Math.min(1,Math.abs(step.data.reduction))} color={step.data.reduction>0.05?T.green:T.text3} thick />
+                            </div>
+                            <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.3rem", color:step.data.reduction>0.05?T.green:T.text3 }}>
+                              {(step.data.reduction*100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:4 }}>
+                            RSS restricted: {step.data.rssR.toFixed(4)} → RSS unrestricted: {step.data.rssU.toFixed(4)} | F = {step.data.fStat.toFixed(2)}
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 7 && step.data && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                          <div style={{ background:T.bg2, padding:"6px 10px", borderRadius:T.rSm }}>
+                            <div style={labelS}>X → Y (kernel)</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                              <ProgressBar value={Math.abs(step.data.kXY.reduction)} color={step.data.kXY.reduction>0.05?T.green:T.text3} thick />
+                              <span style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.kXY.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kXY.reduction*100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                          <div style={{ background:T.bg2, padding:"6px 10px", borderRadius:T.rSm }}>
+                            <div style={labelS}>Y → X (kernel)</div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                              <ProgressBar value={Math.abs(step.data.kYX.reduction)} color={step.data.kYX.reduction>0.05?T.green:T.text3} thick />
+                              <span style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.kYX.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kYX.reduction*100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 8 && step.data && (
+                        <div style={{ marginTop:8, display:"flex", alignItems:"center", gap:12, padding:"8px 12px", background:T.bg2, borderRadius:T.rSm }}>
+                          <div>
+                            <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.4rem", color:T.teal, lineHeight:1 }}>
+                              {step.data.hXY.hsic.toFixed(6)}
+                            </div>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>HSIC(X,Y)</div>
+                          </div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:step.data.hXY.hsic>0.001?T.green:T.text3 }}>
+                            {step.data.hXY.hsic>0.01?"Strong dependence":step.data.hXY.hsic>0.001?"Weak dependence":"Near-independent"} · σ={step.data.hXY.sigma.toFixed(2)}
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 9 && step.data && (
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:8 }}>
+                          <div style={{ background:T.bg2, padding:"8px 10px", borderRadius:T.rSm, borderLeft:`3px solid ${T.green}` }}>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.green, fontWeight:700, marginBottom:4 }}>Forward X → Y</div>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Linear: {(step.data.fwd.lin*100).toFixed(1)}%</div>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Kernel: {(step.data.fwd.ker*100).toFixed(1)}%</div>
+                          </div>
+                          <div style={{ background:T.bg2, padding:"8px 10px", borderRadius:T.rSm, borderLeft:`3px solid ${T.yellow}` }}>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.yellow, fontWeight:700, marginBottom:4 }}>Reverse Y → X</div>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Linear: {(step.data.rev.lin*100).toFixed(1)}%</div>
+                            <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>Kernel: {(step.data.rev.ker*100).toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      )}
+                      {step.id === 10 && step.data && (
+                        <div style={{ marginTop:8, padding:"10px 14px", background:(step.data.linFwd||step.data.kerFwd)?T.greenDim:T.bg2, borderRadius:T.rMd, border:`1px solid ${(step.data.linFwd||step.data.kerFwd)?T.green:T.border0}` }}>
+                          <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1rem", color:(step.data.linFwd||step.data.kerFwd)?T.green:T.text3, marginBottom:4 }}>
+                            {step.data.verdict}
+                          </div>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2 }}>
+                            HSIC total dependence: {step.data.hsic.toFixed(6)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ));
-              })()}
+                );
+              })}
             </div>
           </div>
         )}
       </Section>
 
-      {/* Technique ↔ Hilbert mapping */}
-      <Section title="Technique → Hilbert Mapping" count={Object.keys(HILBERT_MAPPING).length} color={T.teal} style={{ marginTop: 12 }}>
-        <div style={{ fontFamily: T.mono, fontSize: "0.62rem", color: T.text3, marginBottom: 8 }}>
+      {/* ═══ Technique ↔ Hilbert Mapping ═══ */}
+      <Section title="Technique → Hilbert Mapping" count={Object.keys(HILBERT_MAPPING).length} color={T.teal} style={{ marginTop:12 }}>
+        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:8 }}>
           Every forecasting technique secretly operates via a Hilbert space mechanism
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: 4 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(350px, 1fr))", gap:4 }}>
           {TECHNIQUES.map(t => {
             const hm = HILBERT_MAPPING[t.id];
             if (!hm) return null;
             const hc = HILBERT_CONCEPTS.find(c => c.id === hm.concept);
             if (!hc) return null;
             return (
-              <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: "5px 8px",
-                background: T.bg2, borderRadius: T.rSm, border: `1px solid ${T.border0}`, borderLeft: `3px solid ${hc.color}` }}>
-                <span style={{ fontFamily: T.mono, fontSize: "0.65rem", color: familyColor(t.family), fontWeight: 600, minWidth: 90 }}>{t.name}</span>
-                <span style={{ fontFamily: T.mono, fontSize: "0.52rem", padding: "0.1em 0.3em", borderRadius: T.rSm,
-                  background: `${hc.color}15`, color: hc.color, flexShrink: 0 }}>{hc.symbol.split(" ")[0]}</span>
-                <span style={{ fontFamily: T.mono, fontSize: "0.58rem", color: T.text2, flex: 1 }}>{hm.interpretation}</span>
+              <div key={t.id} style={{ display:"flex", alignItems:"flex-start", gap:6, padding:"5px 8px",
+                background:T.bg2, borderRadius:T.rSm, border:`1px solid ${T.border0}`, borderLeft:`3px solid ${hc.color}` }}>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:familyColor(t.family), fontWeight:600, minWidth:90 }}>{t.name}</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.3em", borderRadius:T.rSm,
+                  background:`${hc.color}15`, color:hc.color, flexShrink:0 }}>{hc.symbol.split(" ")[0]}</span>
+                <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, flex:1 }}>{hm.interpretation}</span>
               </div>
             );
           })}
@@ -3404,14 +3784,19 @@ function App() {
     <div style={{ minHeight:"100vh", background:T.bg0, color:T.text1, fontFamily:T.body, fontSize:13, lineHeight:1.5 }}>
       <style>{`
         * { box-sizing:border-box; margin:0; padding:0; }
-        ::-webkit-scrollbar { width:3px; height:3px; }
+        ::-webkit-scrollbar { width:4px; height:4px; }
         ::-webkit-scrollbar-track { background:transparent; }
-        ::-webkit-scrollbar-thumb { background:${T.border1}; border-radius:2px; }
+        ::-webkit-scrollbar-thumb { background:${T.border1}; border-radius:${T.rSm}px; }
+        ::-webkit-scrollbar-thumb:hover { background:${T.border2}; }
         @keyframes statusPulse {
-          0%, 100% { opacity:0; transform:scale(0.8); }
-          50% { opacity:0.6; transform:scale(1.6); }
+          0%, 100% { opacity:0; transform:scale(0.85); }
+          50% { opacity:0.4; transform:scale(1.3); }
         }
-        button:hover { opacity:0.85; }
+        :focus-visible { outline:2px solid ${T.accent}; outline-offset:2px; border-radius:${T.rSm}px; }
+        button { transition:background 150ms ease, color 150ms ease, border-color 150ms ease; }
+        button:hover { filter:brightness(1.15); }
+        input[type="range"] { -webkit-appearance:none; background:${T.bg3}; height:4px; border-radius:2px; outline:none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:${T.accent}; cursor:pointer; border:2px solid ${T.bg1}; }
       `}</style>
 
       <div style={{ padding:"24px 32px 48px", maxWidth:1200, margin:"0 auto" }}>
@@ -3421,7 +3806,7 @@ function App() {
           <div style={{ fontFamily:T.display, fontWeight:700, fontSize:"1.8rem", color:T.text0, lineHeight:1.1, marginBottom:4 }}>
             Foresight Compendium
           </div>
-          <div style={{ fontFamily:T.mono, fontSize:"0.55rem", textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginBottom:16 }}>
+          <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginBottom:16 }}>
             Chromatic Lattice — Time Series Forecasting Observatory
           </div>
           <div style={{ display:"flex", gap:"0.4em", alignItems:"center", flexWrap:"wrap" }}>
@@ -3462,7 +3847,7 @@ function App() {
         {/* FOOTER */}
         <div style={{ marginTop:32, paddingTop:12, borderTop:`1px solid ${T.border0}`,
           display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-          <span style={{ fontFamily:T.mono, fontSize:"0.55rem", textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginRight:6 }}>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginRight:6 }}>
             Epistemic Levels
           </span>
           {Object.keys(LEVEL_COLOR).map(k => <Chip key={k} level={k}>{k}</Chip>)}
@@ -3470,11 +3855,11 @@ function App() {
 
         {/* Family legend */}
         <div style={{ marginTop:8, display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
-          <span style={{ fontFamily:T.mono, fontSize:"0.55rem", textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginRight:6 }}>
+          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.16em", color:T.text3, marginRight:6 }}>
             Technique Families
           </span>
           {FAMILIES.map(f => (
-            <span key={f.id} style={{ display:"inline-flex", alignItems:"center", gap:4, fontFamily:T.mono, fontSize:"0.62rem", color:f.color }}>
+            <span key={f.id} style={{ display:"inline-flex", alignItems:"center", gap:4, fontFamily:T.mono, fontSize:T.fs.xs, color:f.color }}>
               <span style={{ width:6, height:6, borderRadius:"50%", background:f.color }} />
               {f.name} ({familyCounts[f.id]||0})
             </span>
