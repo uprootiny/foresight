@@ -1617,7 +1617,7 @@ function TabBar({ tabs, active, onChange }) {
     <div style={{ display:"flex", gap:2, background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:3, marginBottom:24 }}>
       {tabs.map(t => (
         <button key={t.key} onClick={() => onChange(t.key)} style={{
-          flex:1, fontFamily:T.mono, fontSize:"0.72rem", fontWeight: active===t.key ? 600 : 400,
+          flex:1, fontFamily:T.mono, fontSize:T.fs.sm, fontWeight: active===t.key ? 600 : 400,
           padding:"10px 12px", borderRadius:T.rSm, border:"none", cursor:"pointer",
           background: active===t.key ? T.bg4 : "transparent",
           color: active===t.key ? T.text0 : T.text3,
@@ -1886,7 +1886,7 @@ function TechniquesTab() {
     <div>
       <div style={{ display:"flex", gap:10, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search techniques..."
-          style={{ fontFamily:T.mono, fontSize:"0.72rem", padding:"8px 12px", borderRadius:T.rMd,
+          style={{ fontFamily:T.mono, fontSize:T.fs.sm, padding:"8px 12px", borderRadius:T.rMd,
             border:`1px solid ${T.border1}`, background:T.bg2, color:T.text0, outline:"none", flex:"1 1 200px", minWidth:150 }} />
         <Segmented
           options={[{key:"all",label:"All"},...FAMILIES.map(f=>({key:f.id,label:f.name}))]}
@@ -1942,7 +1942,7 @@ function ComposerTab() {
       {/* Pipeline display */}
       <Section title="Pipeline" count={pipeline.length} color={scoreColor}>
         {pipeline.length === 0 ? (
-          <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text3, padding:"20px 0", textAlign:"center" }}>
+          <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text3, padding:"20px 0", textAlign:"center" }}>
             Click techniques below to build a pipeline
           </div>
         ) : (
@@ -2006,7 +2006,7 @@ function ComposerTab() {
         <Section title="Composition Checks" count={pairChecks.reduce((s,p) => s + p.checks.filter(c=>!c.pass).length, 0)} color={T.orange} style={{ marginTop:12 }}>
           {pairChecks.map((pair, idx) => (
             <div key={idx} style={{ marginBottom:12, paddingBottom:12, borderBottom: idx < pairChecks.length-1 ? `1px solid ${T.border0}` : "none" }}>
-              <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text0, marginBottom:8 }}>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, marginBottom:8 }}>
                 <span style={{ color:familyColor(pair.from.family) }}>{pair.from.name}</span>
                 <span style={{ color:T.text3 }}> → </span>
                 <span style={{ color:familyColor(pair.to.family) }}>{pair.to.name}</span>
@@ -2198,7 +2198,7 @@ function MatrixTab() {
             </Section>
           ) : (
             <div style={{ background:T.bg1, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:20, textAlign:"center" }}>
-              <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text3 }}>Hover a cell to see<br/>compatibility details</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text3 }}>Hover a cell to see<br/>compatibility details</div>
             </div>
           )}
 
@@ -2261,7 +2261,7 @@ function CondensedLogsTab() {
   const filteredOps = opCat === "all" ? OPERATORS : OPERATORS.filter(o => o.category === opCat);
 
   const thS = { fontFamily:T.mono, fontSize:T.fs.xs, textTransform:"uppercase", letterSpacing:"0.12em", color:T.text3, padding:"8px 10px", textAlign:"left", fontWeight:500, borderBottom:`1px solid ${T.border0}` };
-  const tdS = { padding:"6px 10px", borderBottom:`1px solid ${T.border0}`, fontFamily:T.mono, fontSize:"0.72rem", color:T.text1 };
+  const tdS = { padding:"6px 10px", borderBottom:`1px solid ${T.border0}`, fontFamily:T.mono, fontSize:T.fs.sm, color:T.text1 };
 
   return (
     <div>
@@ -2303,11 +2303,11 @@ function CondensedLogsTab() {
                 background:T.bg2, borderRadius:T.rSm, border:`1px solid ${T.border0}`, borderLeft:`3px solid ${cc}` }}>
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                    <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:T.text0 }}>{op.id}</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:600, color:T.text0 }}>{op.id}</span>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.4em", borderRadius:T.rSm,
                       background:`${cc}22`, color:cc }}>{op.category}</span>
                   </div>
-                  <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:3 }}>{op.description}</div>
+                  <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginBottom:3 }}>{op.description}</div>
                   <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.teal, background:T.tealDim, padding:"2px 6px", borderRadius:T.rSm, display:"inline-block" }}>{op.formula}</div>
                   {/* Cross-reference: which techniques use this operator */}
                   {(() => {
@@ -2348,7 +2348,7 @@ function CondensedLogsTab() {
                     <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.85rem", color:T.text0, flex:1 }}>{arch.name}</span>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)",transition:"transform 0.2s" }}>▸</span>
                   </div>
-                  <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginTop:4, marginLeft:15 }}>{arch.description}</div>
+                  <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginTop:4, marginLeft:15 }}>{arch.description}</div>
                 </div>
                 <div style={{ maxHeight:isOpen?400:0, overflow:"hidden", transition:"max-height 0.3s ease" }}>
                   <div style={{ padding:"0 12px 12px", borderTop:`1px solid ${T.border0}` }}>
@@ -2447,7 +2447,7 @@ function ObservatoryTab() {
   const filteredFeeds = feedCategory === "all" ? LIVE_FEEDS : LIVE_FEEDS.filter(f => f.category === feedCategory);
 
   const labelS = { fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
-  const statS = { fontFamily:T.mono, fontSize:"0.72rem" };
+  const statS = { fontFamily:T.mono, fontSize:T.fs.sm };
 
   return (
     <div>
@@ -2464,7 +2464,7 @@ function ObservatoryTab() {
               borderRadius:T.rSm, padding:"8px 10px", cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${T.blue}`,
               display:"block", width:"100%",
             }}>
-              <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text0, fontWeight:600 }}>{f.name}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600 }}>{f.name}</div>
               <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
               <div style={{ display:"flex", gap:4, marginTop:4 }}>
                 <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
@@ -2489,7 +2489,7 @@ function ObservatoryTab() {
               borderRadius:T.rSm, padding:"8px 10px", cursor:"pointer", textAlign:"left", borderLeft:`3px solid ${T.green}`,
               display:"block", width:"100%",
             }}>
-              <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:T.text0, fontWeight:600 }}>{f.name}</div>
+              <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600 }}>{f.name}</div>
               <div style={{ fontFamily:T.body, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>{f.description}</div>
               <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                 background:T.tealDim, color:T.teal, marginTop:4, display:"inline-block" }}>{f.archetype}</span>
@@ -2506,7 +2506,7 @@ function ObservatoryTab() {
       )}
       {error && (
         <div style={{ margin:"12px 0", padding:"10px 14px", background:T.crimsonDim, border:`1px solid ${T.crimson}33`,
-          borderRadius:T.rMd, fontFamily:T.mono, fontSize:"0.72rem", color:T.crimson }}>
+          borderRadius:T.rMd, fontFamily:T.mono, fontSize:T.fs.sm, color:T.crimson }}>
           Error: {error}
         </div>
       )}
@@ -2612,7 +2612,7 @@ function ObservatoryTab() {
                     <Badge color={pc}>{idx + 1}</Badge>
                     <div style={{ flex:1 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-                        <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:T.text0 }}>{tech.name}</span>
+                        <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:600, color:T.text0 }}>{tech.name}</span>
                         <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
                           background:`${fc}18`, color:fc }}>{tech.family}</span>
                         <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, padding:"0.1em 0.35em", borderRadius:T.rSm,
@@ -3146,6 +3146,9 @@ function CausalTab() {
   const [feedMode, setFeedMode] = useState("synthetic"); // synthetic | live
   const [livePair, setLivePair] = useState(null);
   const [loadingFeed, setLoadingFeed] = useState(false);
+  // Benchmarks
+  const [benchResults, setBenchResults] = useState(null);
+  const [benchRunning, setBenchRunning] = useState(false);
 
   // Auto-advance steps
   useEffect(() => {
@@ -3364,8 +3367,71 @@ function CausalTab() {
     }, 80);
   }, [causalType, delay, noise, nPts, feedMode, signals]);
 
+  // ═══ BENCHMARK RUNNER ═══
+  const runBenchmarks = useCallback(() => {
+    setBenchRunning(true);
+    setTimeout(() => {
+      const scenarios = [
+        { id:"linear", label:"Linear X→Y", gen:(n,d,σ) => {
+          const x=Array.from({length:n},()=>gaussianRandom()), y=new Array(n).fill(0);
+          for(let t=d;t<n;t++) y[t]=0.7*x[t-d]+σ*gaussianRandom();
+          return {x,y};
+        }},
+        { id:"nonlinear", label:"Nonlinear X→Y", gen:(n,d,σ) => {
+          const x=Array.from({length:n},()=>gaussianRandom()), y=new Array(n).fill(0);
+          for(let t=d;t<n;t++) y[t]=0.6*Math.sin(2.5*x[t-d])+0.3*x[t-d]*x[t-d]+σ*gaussianRandom();
+          return {x,y};
+        }},
+        { id:"none", label:"Independent", gen:(n,d,σ) => ({
+          x:Array.from({length:n},()=>gaussianRandom()),
+          y:Array.from({length:n},()=>gaussianRandom())
+        })},
+        { id:"bidirectional", label:"X↔Y Mutual", gen:(n,d,σ) => {
+          const x=Array.from({length:n},()=>gaussianRandom()), y=new Array(n).fill(0);
+          for(let t=d;t<n;t++){y[t]=0.5*x[t-d]+σ*gaussianRandom();if(t>=d*2)x[t]=x[t]*0.5+0.3*y[t-d]+σ*0.5*gaussianRandom();}
+          return {x,y};
+        }},
+      ];
+      const noiseLevels = [0.3, 0.5, 1.0, 1.5];
+      const sampleSizes = [150, 300, 500];
+      const nTrials = 3;
+      const lag = 3, lags = 5;
+      const results = [];
+
+      for (const sc of scenarios) {
+        for (const σ of noiseLevels) {
+          for (const n of sampleSizes) {
+            let linDet=0, kerDet=0, hsicDet=0, linTime=0, kerTime=0, hsicTime=0;
+            for (let trial=0; trial<nTrials; trial++) {
+              const {x,y} = sc.gen(n, lag, σ);
+              const t0 = performance.now();
+              const gt = grangerTest(x,y,lags);
+              linTime += performance.now()-t0;
+              const t1 = performance.now();
+              const kt = kernelGrangerTest(x,y,lags);
+              kerTime += performance.now()-t1;
+              const t2 = performance.now();
+              const ht = hsicTest(x.slice(lags),y.slice(lags));
+              hsicTime += performance.now()-t2;
+              if(gt.reduction>0.05) linDet++;
+              if(kt.reduction>0.05) kerDet++;
+              if(ht.hsic>0.001) hsicDet++;
+            }
+            results.push({
+              scenario:sc.id, label:sc.label, noise:σ, n,
+              linRate:linDet/nTrials, kerRate:kerDet/nTrials, hsicRate:hsicDet/nTrials,
+              linMs:(linTime/nTrials).toFixed(1), kerMs:(kerTime/nTrials).toFixed(1), hsicMs:(hsicTime/nTrials).toFixed(1),
+            });
+          }
+        }
+      }
+      setBenchResults(results);
+      setBenchRunning(false);
+    }, 50);
+  }, []);
+
   const labelS = { fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 };
-  const statS = { fontFamily:T.mono, fontSize:"0.72rem" };
+  const statS = { fontFamily:T.mono, fontSize:T.fs.sm };
 
   // Pairs for live feed causal analysis
   const livePairs = [
@@ -3382,7 +3448,7 @@ function CausalTab() {
     <div>
       {/* ═══ Compact Hilbert ↔ Causality Reference ═══ */}
       <Section title="Hilbert Space ↔ Causality" count={HILBERT_CONCEPTS.length} color={T.purple}>
-        <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:12, lineHeight:1.6 }}>
+        <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginBottom:12, lineHeight:1.6 }}>
           Causal discovery is <strong style={{color:T.text0}}>geometry of information</strong>: which variables change the orthogonal decomposition of future information?
           All methods differ only by what Hilbert space they embed into, how they approximate projections, and how they test orthogonality.
         </div>
@@ -3410,8 +3476,8 @@ function CausalTab() {
               <div key={hc.id} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, overflow:"hidden", borderLeft:`3px solid ${hc.color}` }}>
                 <div onClick={() => setExpandedConcept(isOpen ? null : hc.id)} style={{ padding:"8px 10px", cursor:"pointer" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontFamily:T.mono, fontSize:"0.72rem", fontWeight:600, color:hc.color }}>{hc.symbol}</span>
-                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:"0.82rem", color:T.text0, flex:1 }}>{hc.name}</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:600, color:hc.color }}>{hc.symbol}</span>
+                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, flex:1 }}>{hc.name}</span>
                     <Badge color={hc.color}>{hc.techniques.length}</Badge>
                     <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, transform:isOpen?"rotate(90deg)":"rotate(0)", transition:"transform 0.2s" }}>▸</span>
                   </div>
@@ -3449,7 +3515,7 @@ function CausalTab() {
 
       {/* ═══ CAUSAL DISCOVERY MACHINE ═══ */}
       <Section title="Causal Discovery Machine" color={T.orange} style={{ marginTop:12 }}>
-        <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, marginBottom:12, lineHeight:1.6 }}>
+        <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginBottom:12, lineHeight:1.6 }}>
           Step-by-step numerical walkthrough: data → predictor spaces → projections → residuals → orthogonality test → verdict.
           Uses <strong style={{color:T.blue}}>linear Granger</strong> (L² projection),
           <strong style={{color:T.orange}}> kernel Granger</strong> (RKHS projection), and
@@ -3515,14 +3581,14 @@ function CausalTab() {
                 </button>
               ))}
             </div>
-            {loadingFeed && <div style={{ padding:"12px 0", fontFamily:T.mono, fontSize:"0.72rem", color:T.blue }}><StatusDot color={T.blue} pulse size={8} /> Fetching live data...</div>}
+            {loadingFeed && <div style={{ padding:"12px 0", fontFamily:T.mono, fontSize:T.fs.sm, color:T.blue }}><StatusDot color={T.blue} pulse size={8} /> Fetching live data...</div>}
           </div>
         )}
 
         {/* Run button */}
         <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
           <button onClick={runExperiment} disabled={running || (feedMode==="live" && !signals)} style={{
-            fontFamily:T.mono, fontSize:"0.72rem", padding:"8px 20px", borderRadius:T.rMd, cursor:running?"wait":"pointer",
+            fontFamily:T.mono, fontSize:T.fs.sm, padding:"8px 20px", borderRadius:T.rMd, cursor:running?"wait":"pointer",
             background:T.orangeDim, border:`1px solid ${T.orange}44`, color:T.orange, fontWeight:600,
           }}>{running ? "Computing projections..." : "▶ Run Full Causal Analysis"}</button>
           {steps && (
@@ -3593,7 +3659,7 @@ function CausalTab() {
                       <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:step.color, marginBottom:4, padding:"4px 8px", background:`${step.color}0a`, borderRadius:T.rSm, display:"inline-block" }}>
                         {step.math}
                       </div>
-                      <div style={{ fontFamily:T.body, fontSize:"0.72rem", color:T.text2, lineHeight:1.5 }}>{step.desc}</div>
+                      <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, lineHeight:1.5 }}>{step.desc}</div>
 
                       {/* Step-specific visualizations */}
                       {step.id === 0 && step.data && (
@@ -3644,7 +3710,7 @@ function CausalTab() {
                       )}
                       {step.id === 4 && step.data && (
                         <div style={{ marginTop:8, padding:"8px 12px", background:step.data.isCausal?T.greenDim:T.bg2, borderRadius:T.rSm, border:`1px solid ${step.data.isCausal?T.green:T.border0}33` }}>
-                          <div style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.isCausal?T.green:T.text3, fontWeight:700 }}>
+                          <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:step.data.isCausal?T.green:T.text3, fontWeight:700 }}>
                             Corr(ε, Y) = {step.data.corrResidY.toFixed(4)} {step.data.isCausal?"→ CAUSAL SIGNAL DETECTED":"→ no signal"}
                           </div>
                           <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text2, marginTop:2 }}>
@@ -3673,14 +3739,14 @@ function CausalTab() {
                             <div style={labelS}>X → Y (kernel)</div>
                             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                               <ProgressBar value={Math.abs(step.data.kXY.reduction)} color={step.data.kXY.reduction>0.05?T.green:T.text3} thick />
-                              <span style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.kXY.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kXY.reduction*100).toFixed(1)}%</span>
+                              <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:step.data.kXY.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kXY.reduction*100).toFixed(1)}%</span>
                             </div>
                           </div>
                           <div style={{ background:T.bg2, padding:"6px 10px", borderRadius:T.rSm }}>
                             <div style={labelS}>Y → X (kernel)</div>
                             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                               <ProgressBar value={Math.abs(step.data.kYX.reduction)} color={step.data.kYX.reduction>0.05?T.green:T.text3} thick />
-                              <span style={{ fontFamily:T.mono, fontSize:"0.72rem", color:step.data.kYX.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kYX.reduction*100).toFixed(1)}%</span>
+                              <span style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:step.data.kYX.reduction>0.05?T.green:T.text3, fontWeight:700 }}>{(step.data.kYX.reduction*100).toFixed(1)}%</span>
                             </div>
                           </div>
                         </div>
@@ -3723,6 +3789,112 @@ function CausalTab() {
                         </div>
                       )}
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* ═══ BENCHMARK SUITE ═══ */}
+      <Section title="Causal Method Benchmarks" color={T.yellow} style={{ marginTop:12 }}>
+        <div style={{ fontFamily:T.body, fontSize:T.fs.sm, color:T.text2, marginBottom:12, lineHeight:1.6 }}>
+          Run a battery of experiments across 4 signal types × 4 noise levels × 3 sample sizes.
+          Compare <strong style={{color:T.blue}}>Linear Granger</strong>, <strong style={{color:T.orange}}>Kernel Granger</strong>, and <strong style={{color:T.teal}}>HSIC</strong> detection rates and timing.
+        </div>
+        <button onClick={runBenchmarks} disabled={benchRunning} style={{
+          fontFamily:T.mono, fontSize:T.fs.sm, padding:"8px 20px", borderRadius:T.rMd, cursor:benchRunning?"wait":"pointer",
+          background:T.yellowDim, border:`1px solid ${T.yellow}44`, color:T.yellow, fontWeight:600, marginBottom:12,
+        }}>{benchRunning ? "Running 144 experiments..." : "▶ Run Benchmark Suite"}</button>
+
+        {benchResults && (
+          <div>
+            {/* Summary by scenario */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px,1fr))", gap:8, marginBottom:16 }}>
+              {["linear","nonlinear","none","bidirectional"].map(scId => {
+                const rows = benchResults.filter(r => r.scenario === scId);
+                const avgLin = rows.reduce((s,r) => s+r.linRate,0)/rows.length;
+                const avgKer = rows.reduce((s,r) => s+r.kerRate,0)/rows.length;
+                const avgHsic = rows.reduce((s,r) => s+r.hsicRate,0)/rows.length;
+                const label = rows[0]?.label || scId;
+                const shouldDetect = scId !== "none";
+                return (
+                  <div key={scId} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rMd, padding:"12px 14px" }}>
+                    <div style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.md, color:T.text0, marginBottom:8 }}>{label}</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                      {[
+                        {name:"Linear", rate:avgLin, color:T.blue},
+                        {name:"Kernel", rate:avgKer, color:T.orange},
+                        {name:"HSIC", rate:avgHsic, color:T.teal},
+                      ].map(m => (
+                        <div key={m.name} style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:m.color, minWidth:50 }}>{m.name}</span>
+                          <div style={{ flex:1, height:6, background:T.bg3, borderRadius:3, overflow:"hidden" }}>
+                            <div style={{ width:`${m.rate*100}%`, height:"100%", background:m.color, borderRadius:3, transition:"width 0.3s" }} />
+                          </div>
+                          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, minWidth:38, textAlign:"right",
+                            color: shouldDetect ? (m.rate>0.7?T.green:m.rate>0.4?T.yellow:T.danger) : (m.rate<0.2?T.green:m.rate<0.5?T.yellow:T.danger)
+                          }}>{(m.rate*100).toFixed(0)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginTop:6 }}>
+                      {shouldDetect ? "Higher = better (should detect)" : "Lower = better (false positive rate)"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Noise sensitivity grid */}
+            <div style={labelS}>Detection vs Noise Level (n=300, all methods)</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px,1fr))", gap:8, marginBottom:12 }}>
+              {["linear","nonlinear","none","bidirectional"].map(scId => {
+                const rows = benchResults.filter(r => r.scenario === scId && r.n === 300);
+                return (
+                  <div key={scId} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rSm, padding:"8px 10px" }}>
+                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text0, fontWeight:600, marginBottom:6 }}>{rows[0]?.label}</div>
+                    <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 1fr", gap:"2px 6px", alignItems:"center" }}>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>σ</span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.blue, textAlign:"center" }}>Lin</span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.orange, textAlign:"center" }}>Ker</span>
+                      <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.teal, textAlign:"center" }}>HSIC</span>
+                      {rows.map(r => (
+                        <React.Fragment key={r.noise}>
+                          <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>{r.noise}</span>
+                          {[{rate:r.linRate,c:T.blue},{rate:r.kerRate,c:T.orange},{rate:r.hsicRate,c:T.teal}].map((m,i) => (
+                            <div key={i} style={{ textAlign:"center" }}>
+                              <span style={{
+                                fontFamily:T.mono, fontSize:T.fs.xs, fontWeight:600, padding:"1px 4px", borderRadius:T.rSm,
+                                background:`${m.rate>0.7?T.green:m.rate>0.3?T.yellow:T.text3}18`,
+                                color:m.rate>0.7?T.green:m.rate>0.3?T.yellow:T.text3,
+                              }}>{(m.rate*100).toFixed(0)}%</span>
+                            </div>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Timing summary */}
+            <div style={labelS}>Average Timing (ms per run)</div>
+            <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+              {[
+                {name:"Linear Granger", color:T.blue, key:"linMs"},
+                {name:"Kernel Granger", color:T.orange, key:"kerMs"},
+                {name:"HSIC", color:T.teal, key:"hsicMs"},
+              ].map(m => {
+                const avg = (benchResults.reduce((s,r) => s+parseFloat(r[m.key]),0)/benchResults.length).toFixed(1);
+                return (
+                  <div key={m.name} style={{ background:T.bg2, border:`1px solid ${T.border0}`, borderRadius:T.rSm, padding:"8px 14px", display:"flex", alignItems:"center", gap:8 }}>
+                    <StatusDot color={m.color} size={6} />
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text1 }}>{m.name}</span>
+                    <span style={{ fontFamily:T.display, fontWeight:700, fontSize:T.fs.lg, color:m.color }}>{avg}</span>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>ms</span>
                   </div>
                 );
               })}

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foresight — Time Series Forecasting Compendium</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg0: #08080c; --bg1: #0f0f18; --bg2: #161624; --bg3: #1e1e30; --bg4: #28283c;
+    --border0: #1e1e2e; --border1: #2c2c40; --border2: #3a3a50;
+    --text0: #eae9f0; --text1: #c4c3ce; --text2: #9a99aa; --text3: #8a8999;
+    --accent: #4a8fe7; --positive: #3dbe78; --warning: #e0c040;
+    --danger: #e84a5a; --info: #9b6dff; --highlight: #e8762b;
+  }
+  body { background: var(--bg0); color: var(--text1); font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .hero {
+    min-height: 70vh; display: flex; flex-direction: column; justify-content: center;
+    padding: 60px 40px; max-width: 1000px; margin: 0 auto;
+  }
+  .hero h1 {
+    font-family: Georgia, serif; font-size: 3.2rem; font-weight: 700;
+    color: var(--text0); line-height: 1.1; margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--highlight); }
+  .subtitle {
+    font-family: ui-monospace, monospace; font-size: 0.7rem; text-transform: uppercase;
+    letter-spacing: 0.18em; color: var(--text3); margin-bottom: 32px;
+  }
+  .hero-desc {
+    font-size: 1.15rem; color: var(--text2); max-width: 640px; margin-bottom: 40px;
+  }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cta {
+    font-family: ui-monospace, monospace; font-size: 0.85rem; font-weight: 600;
+    padding: 12px 28px; border-radius: 6px; cursor: pointer; display: inline-flex;
+    align-items: center; gap: 8px; transition: all 150ms ease;
+  }
+  .cta-primary {
+    background: var(--highlight); color: #fff; border: 1px solid transparent;
+  }
+  .cta-primary:hover { filter: brightness(1.15); text-decoration: none; }
+  .cta-secondary {
+    background: var(--bg3); color: var(--text1); border: 1px solid var(--border1);
+  }
+  .cta-secondary:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+  .stats-bar {
+    display: flex; gap: 24px; flex-wrap: wrap; padding: 20px 0;
+    border-top: 1px solid var(--border0); border-bottom: 1px solid var(--border0);
+    margin: 40px 0;
+  }
+  .stat { text-align: center; }
+  .stat-val {
+    font-family: Georgia, serif; font-size: 2rem; font-weight: 700; line-height: 1;
+  }
+  .stat-label {
+    font-family: ui-monospace, monospace; font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--text3); margin-top: 4px;
+  }
+
+  .features {
+    max-width: 1000px; margin: 0 auto 60px; padding: 0 40px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+  }
+  .feature-card {
+    background: var(--bg2); border: 1px solid var(--border0); border-radius: 8px;
+    padding: 20px; transition: border-color 200ms;
+  }
+  .feature-card:hover { border-color: var(--border2); }
+  .feature-card h3 {
+    font-family: Georgia, serif; font-size: 1.05rem; color: var(--text0);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .feature-card p { font-size: 0.85rem; color: var(--text2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .core-section {
+    max-width: 1000px; margin: 0 auto 60px; padding: 0 40px;
+  }
+  .section-title {
+    font-family: Georgia, serif; font-size: 1.8rem; color: var(--text0);
+    margin-bottom: 8px;
+  }
+  .section-sub {
+    font-size: 0.9rem; color: var(--text2); margin-bottom: 24px; max-width: 640px;
+  }
+
+  .pipeline-demo {
+    display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    padding: 16px; background: var(--bg2); border-radius: 8px;
+    border: 1px solid var(--border0); margin-bottom: 16px;
+  }
+  .pipe-step {
+    font-family: ui-monospace, monospace; font-size: 0.75rem; padding: 6px 12px;
+    border-radius: 4px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pipe-arrow { color: var(--text3); font-size: 1.1rem; }
+
+  .hilbert-steps {
+    display: grid; grid-template-columns: 1fr; gap: 8px;
+  }
+  .h-step {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px;
+    background: var(--bg2); border-radius: 6px; border: 1px solid var(--border0);
+    border-left: 3px solid var(--border0);
+  }
+  .h-step-num {
+    font-family: Georgia, serif; font-weight: 700; font-size: 1.1rem;
+    min-width: 28px; text-align: center;
+  }
+  .h-step-title { font-weight: 600; color: var(--text0); font-size: 0.85rem; }
+  .h-step-math {
+    font-family: ui-monospace, monospace; font-size: 0.72rem;
+    padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 2px;
+  }
+  .h-step-desc { font-size: 0.8rem; color: var(--text2); margin-top: 4px; }
+
+  .footer {
+    padding: 40px; text-align: center; border-top: 1px solid var(--border0);
+    font-family: ui-monospace, monospace; font-size: 0.7rem; color: var(--text3);
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding: 40px 20px; }
+    .hero h1 { font-size: 2.2rem; }
+    .features, .core-section { padding: 0 20px; }
+    .stats-bar { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="subtitle">Chromatic Lattice &mdash; Time Series Forecasting Observatory</div>
+  <h1>Foresight <span>Compendium</span></h1>
+  <p class="hero-desc">
+    An interactive encyclopedia of time series forecasting techniques, composability rules,
+    and a live causal discovery machine built on Hilbert space geometry.
+    Explore 35 techniques, compose safe pipelines, and run real-time causal analysis
+    on live data feeds.
+  </p>
+  <div class="cta-row">
+    <a href="index.html" class="cta cta-primary">Launch App &rarr;</a>
+    <a href="https://github.com/uprootiny/foresight" class="cta cta-secondary">GitHub</a>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-val" style="color:var(--highlight)">35</div>
+      <div class="stat-label">Techniques</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--info)">9</div>
+      <div class="stat-label">Families</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--accent)">12</div>
+      <div class="stat-label">Composability Principles</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--positive)">22</div>
+      <div class="stat-label">CLR Operators</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--danger)">10</div>
+      <div class="stat-label">Causal Discovery Steps</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" style="color:var(--warning)">11</div>
+      <div class="stat-label">Live Data Feeds</div>
+    </div>
+  </div>
+</div>
+
+<div class="features">
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--highlight)"></span> Technique Catalog</h3>
+    <p>35 techniques across 9 families &mdash; from Naive baselines to Transformers and Gaussian Processes. Each tagged with input/output types, assumptions, time scales, and leakage risk.</p>
+  </div>
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--accent)"></span> Pipeline Composer</h3>
+    <p>Chain techniques interactively with real-time composability checks. Six rule checks per pair: semantic compatibility, ownership, time honesty, scale compatibility, evaluation integrity, identifiability.</p>
+  </div>
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--positive)"></span> Compatibility Matrix</h3>
+    <p>Full pairwise compatibility heatmap. Hover or click any cell to see the detailed breakdown of why two techniques do or don't compose safely.</p>
+  </div>
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--info)"></span> Observatory</h3>
+    <p>Connect to live weather and crypto feeds. Compute statistical profiles, detect regimes, and get automatic technique recommendations based on signal characteristics.</p>
+  </div>
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--danger)"></span> Causal Discovery Machine</h3>
+    <p>10-step interactive walkthrough from data to causality verdict. Linear Granger, kernel Granger (RKHS), and HSIC. Run on synthetic signals or live API data.</p>
+  </div>
+  <div class="feature-card">
+    <h3><span class="dot" style="background:var(--warning)"></span> Graph &amp; Percolation</h3>
+    <p>Force-directed technique dependency graph. Interactive percolation simulation showing how confidence propagates through a pipeline.</p>
+  </div>
+</div>
+
+<div class="core-section">
+  <h2 class="section-title">The Conceptual Core</h2>
+  <p class="section-sub">
+    Causal discovery is <strong style="color:var(--text0)">geometry of information</strong>.
+    Every method differs only by what Hilbert space it embeds into, how it approximates projections,
+    and how it tests orthogonality. Here is the 10-step machine:
+  </p>
+
+  <div class="hilbert-steps">
+    <div class="h-step" style="border-left-color:var(--text0)">
+      <div class="h-step-num" style="color:var(--text0)">0</div>
+      <div>
+        <div class="h-step-title">The Concrete Problem</div>
+        <div class="h-step-math" style="background:rgba(234,233,240,0.05); color:var(--text1)">Observe X_t, Y_t. Does Y &rarr; X?</div>
+        <div class="h-step-desc">Two signals. Does knowing Y's past improve prediction of X's future?</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--accent)">
+      <div class="h-step-num" style="color:var(--accent)">1</div>
+      <div>
+        <div class="h-step-title">Build Predictor Spaces</div>
+        <div class="h-step-math" style="background:rgba(74,143,231,0.08); color:var(--accent)">H_X = span{X_{t-1},...,X_{t-L}} vs H_{X,Y}</div>
+        <div class="h-step-desc">Restricted (X only) vs unrestricted (X+Y) lag spaces.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--accent)">
+      <div class="h-step-num" style="color:var(--accent)">2</div>
+      <div>
+        <div class="h-step-title">Compute Projections (OLS)</div>
+        <div class="h-step-math" style="background:rgba(74,143,231,0.08); color:var(--accent)">X&#770; = P_H(X_{t+1}) &mdash; orthogonal projection</div>
+        <div class="h-step-desc">Best linear prediction = projection onto the past subspace. Show &beta; coefficients, R&sup2;.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--highlight)">
+      <div class="h-step-num" style="color:var(--highlight)">3</div>
+      <div>
+        <div class="h-step-title">Compute Innovations (Residuals)</div>
+        <div class="h-step-math" style="background:rgba(232,118,43,0.08); color:var(--highlight)">&epsilon;_{t+1} = X_{t+1} &minus; P_H(X_{t+1})</div>
+        <div class="h-step-desc">The unpredictable part. Orthogonal to the past. The irreducible uncertainty.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--positive)">
+      <div class="h-step-num" style="color:var(--positive)">4</div>
+      <div>
+        <div class="h-step-title">Test Orthogonality</div>
+        <div class="h-step-math" style="background:rgba(61,190,120,0.08); color:var(--positive)">&langle;&epsilon;^(X), Y_t&rangle; &ne; 0 &rArr; Y causes X</div>
+        <div class="h-step-desc">If the restricted residual correlates with Y, then Y carries information about X's future.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--positive)">
+      <div class="h-step-num" style="color:var(--positive)">5</div>
+      <div>
+        <div class="h-step-title">Residual Energy Reduction = Granger</div>
+        <div class="h-step-math" style="background:rgba(61,190,120,0.08); color:var(--positive)">&Vert;&epsilon;^{X,Y}&Vert; < &Vert;&epsilon;^{X}&Vert; &rArr; causality</div>
+        <div class="h-step-desc">Classical Granger test. F-statistic. Equivalent to comparing projection distances in L&sup2;.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--highlight)">
+      <div class="h-step-num" style="color:var(--highlight)">6</div>
+      <div>
+        <div class="h-step-title">Why Linear Projections Fail</div>
+        <div class="h-step-math" style="background:rgba(232,118,43,0.08); color:var(--highlight)">X = sin(Y) + Y&sup2; + &epsilon;</div>
+        <div class="h-step-desc">Nonlinear relationships are invisible to linear projections. We need a bigger Hilbert space.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--highlight)">
+      <div class="h-step-num" style="color:var(--highlight)">7</div>
+      <div>
+        <div class="h-step-title">Lift into RKHS &mdash; Kernel Granger</div>
+        <div class="h-step-math" style="background:rgba(232,118,43,0.08); color:var(--highlight)">&phi;(x) &isin; H_k, k(x,y) = exp(&minus;&Vert;x&minus;y&Vert;&sup2;/2&sigma;&sup2;)</div>
+        <div class="h-step-desc">RBF kernel lifts data into infinite-dimensional space where nonlinear becomes linear.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:#2bbfa0">
+      <div class="h-step-num" style="color:#2bbfa0">8</div>
+      <div>
+        <div class="h-step-title">HSIC &mdash; Cross-Covariance Operator</div>
+        <div class="h-step-math" style="background:rgba(43,191,160,0.08); color:#2bbfa0">&Vert;C_{XY}&Vert;&sup2;_HS = 0 &hArr; X &perp; Y</div>
+        <div class="h-step-desc">Hilbert-Schmidt Independence Criterion. Measures ALL dependence (linear + nonlinear) via operator norm.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--info)">
+      <div class="h-step-num" style="color:var(--info)">9</div>
+      <div>
+        <div class="h-step-title">Time Direction Emerges</div>
+        <div class="h-step-math" style="background:rgba(155,109,255,0.08); color:var(--info)">H_{t-2} &sub; H_{t-1} &sub; H_t</div>
+        <div class="h-step-desc">Asymmetry in residual reduction IS the arrow of causation. No direction imposed &mdash; it emerges from nested past subspaces.</div>
+      </div>
+    </div>
+    <div class="h-step" style="border-left-color:var(--positive)">
+      <div class="h-step-num" style="color:var(--positive)">10</div>
+      <div>
+        <div class="h-step-title">Verdict</div>
+        <div class="h-step-math" style="background:rgba(61,190,120,0.08); color:var(--positive)">Which variables change the orthogonal decomposition?</div>
+        <div class="h-step-desc">Compare forward vs reverse, linear vs kernel. The geometry tells the story.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="core-section">
+  <h2 class="section-title">Example Pipeline</h2>
+  <p class="section-sub">
+    Techniques compose into pipelines. The system checks each pair for semantic compatibility,
+    ownership conflicts, time honesty, and leakage risk.
+  </p>
+  <div class="pipeline-demo">
+    <div class="pipe-step" style="background:rgba(61,190,120,0.12); color:var(--positive); border:1px solid rgba(61,190,120,0.25)">STL Decomposition</div>
+    <span class="pipe-arrow">&rarr;</span>
+    <div class="pipe-step" style="background:rgba(74,143,231,0.12); color:var(--accent); border:1px solid rgba(74,143,231,0.25)">ARIMA</div>
+    <span class="pipe-arrow">&rarr;</span>
+    <div class="pipe-step" style="background:rgba(232,118,43,0.12); color:var(--highlight); border:1px solid rgba(232,118,43,0.25)">Gradient Boosted Trees</div>
+    <span class="pipe-arrow">&rarr;</span>
+    <div class="pipe-step" style="background:rgba(43,191,160,0.12); color:#2bbfa0; border:1px solid rgba(43,191,160,0.25)">Conformal Prediction</div>
+  </div>
+  <div style="font-size:0.8rem; color:var(--text2)">
+    Decompose &rarr; Model trend &rarr; Boost residuals &rarr; Calibrate uncertainty.
+    All pairs pass composability checks.
+  </div>
+</div>
+
+<div class="core-section">
+  <h2 class="section-title">Live Data Feeds</h2>
+  <p class="section-sub">
+    The Observatory and Causal Lab connect to real APIs for live analysis.
+  </p>
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px;">
+    <div class="feature-card" style="padding:12px 16px;">
+      <h3 style="font-size:0.85rem;"><span class="dot" style="background:var(--accent)"></span> Open-Meteo Weather</h3>
+      <p style="font-size:0.75rem;">Berlin, NYC, Tokyo, Sydney temps. Wind, humidity, pressure, precipitation.</p>
+    </div>
+    <div class="feature-card" style="padding:12px 16px;">
+      <h3 style="font-size:0.85rem;"><span class="dot" style="background:var(--warning)"></span> CoinGecko Crypto</h3>
+      <p style="font-size:0.75rem;">BTC, ETH, SOL price histories. 90 days, daily granularity.</p>
+    </div>
+    <div class="feature-card" style="padding:12px 16px;">
+      <h3 style="font-size:0.85rem;"><span class="dot" style="background:var(--highlight)"></span> Synthetic Generators</h3>
+      <p style="font-size:0.75rem;">8 types: trending walk, mean-reverting, seasonal, regime-switching, chaotic, Poisson bursts, heavy-tail, multimodal.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div style="margin-bottom:8px;">
+    <a href="index.html" style="color:var(--highlight)">Launch App</a>
+    &nbsp;&middot;&nbsp;
+    <a href="https://github.com/uprootiny/foresight">GitHub</a>
+  </div>
+  Chromatic Lattice &mdash; Foresight Compendium
+</footer>
+
+</body>
+</html>
