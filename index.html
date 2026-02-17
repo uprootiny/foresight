@@ -1684,27 +1684,48 @@ function StatusDot({ color, pulse, size = 8 }) {
   );
 }
 
-function Sparkline({ data, width = 200, height = 40, color = T.blue, showRange = false, showMean = false, filled = false }) {
+function Sparkline({ data, width = 200, height = 40, color = T.blue, showRange = false, showMean = false, filled = false, interactive = false, label = "" }) {
+  const [hover, setHover] = useState(null);
   if (!data || data.length < 2) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const pts = data.map((v, i) =>
-    `${(i / (data.length - 1)) * width},${height - ((v - min) / range) * (height - 4) - 2}`
-  );
+  const toX = i => (i / (data.length - 1)) * width;
+  const toY = v => height - ((v - min) / range) * (height - 4) - 2;
+  const pts = data.map((v, i) => `${toX(i)},${toY(v)}`);
   const line = pts.join(" ");
-  const fillPath = filled ? `M0,${height} L${line.split(" ").map((p, i) => i === 0 ? p.replace(/^/, "") : p).join(" L")} L${width},${height} Z` : null;
-  const meanY = height - (((data.reduce((s, v) => s + v, 0) / data.length) - min) / range) * (height - 4) - 2;
+  const meanVal = data.reduce((s, v) => s + v, 0) / data.length;
+  const meanY = toY(meanVal);
+
+  const handleMouse = interactive ? (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const idx = Math.round((x / width) * (data.length - 1));
+    if (idx >= 0 && idx < data.length) setHover({ idx, x: toX(idx), y: toY(data[idx]), val: data[idx] });
+  } : undefined;
+
   return (
-    <svg width={width} height={height} style={{ display: "block" }}>
-      {filled && <path d={`M0,${height} ${pts.map((p, i) => `L${p}`).join(" ")} L${width},${height} Z`}
+    <svg width={width} height={height} style={{ display:"block", cursor: interactive ? "crosshair" : "default" }}
+      onMouseMove={handleMouse} onMouseLeave={interactive ? () => setHover(null) : undefined}
+      role={label ? "img" : undefined} aria-label={label || undefined}>
+      {filled && <path d={`M0,${height} ${pts.map(p => `L${p}`).join(" ")} L${width},${height} Z`}
         fill={`${color}15`} />}
       <polyline points={line} fill="none" stroke={color} strokeWidth={1.2} />
       {showMean && <line x1={0} y1={meanY} x2={width} y2={meanY} stroke={T.text3} strokeWidth={0.5} strokeDasharray="3,3" />}
       {showRange && (
         <React.Fragment>
-          <text x={width - 2} y={9} textAnchor="end" style={{ fontFamily: T.mono, fontSize: 8, fill: T.text3 }}>{max.toFixed(1)}</text>
-          <text x={width - 2} y={height - 2} textAnchor="end" style={{ fontFamily: T.mono, fontSize: 8, fill: T.text3 }}>{min.toFixed(1)}</text>
+          <text x={width - 2} y={9} textAnchor="end" style={{ fontFamily:T.mono, fontSize:8, fill:T.text3 }}>{max.toFixed(1)}</text>
+          <text x={width - 2} y={height - 2} textAnchor="end" style={{ fontFamily:T.mono, fontSize:8, fill:T.text3 }}>{min.toFixed(1)}</text>
+        </React.Fragment>
+      )}
+      {hover && (
+        <React.Fragment>
+          <line x1={hover.x} y1={0} x2={hover.x} y2={height} stroke={T.text3} strokeWidth={0.5} strokeDasharray="2,2" />
+          <circle cx={hover.x} cy={hover.y} r={3} fill={color} stroke={T.bg0} strokeWidth={1.5} />
+          <rect x={Math.min(hover.x + 4, width - 60)} y={Math.max(2, hover.y - 16)} width={56} height={14} rx={2} fill={T.bg3} stroke={T.border1} strokeWidth={0.5} />
+          <text x={Math.min(hover.x + 8, width - 56)} y={Math.max(12, hover.y - 5)} style={{ fontFamily:T.mono, fontSize:9, fill:T.text0 }}>
+            [{hover.idx}] {hover.val.toFixed(2)}
+          </text>
         </React.Fragment>
       )}
     </svg>
@@ -2234,6 +2255,37 @@ function ComposerTab() {
         </Section>
       )}
 
+      {/* Pipeline Simulation Preview */}
+      {pipeline.length >= 1 && (
+        <Section title="Simulation Preview" color={T.teal} style={{ marginTop:12 }}>
+          {(() => {
+            const synData = generateSeasonal(200, 7, 10, 0.05, 2);
+            let current = synData;
+            const stages = [{ label:"Input: Weekly Seasonal", data:current, color:T.text2 }];
+            for (const id of pipeline) {
+              const tech = TECHNIQUES.find(t => t.id === id);
+              if (!tech) continue;
+              const result = simulateStep(id, current);
+              stages.push({ label:`${tech.name}: ${result.label}`, data:result.values, color:familyColor(tech.family) });
+              current = result.values;
+            }
+            return (
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:4 }}>
+                  Simulated on synthetic weekly seasonal signal (n=200)
+                </div>
+                {stages.map((s,i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"4px 8px", background:T.bg2, borderRadius:T.rSm, borderLeft:`3px solid ${s.color}` }}>
+                    <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:s.color, minWidth:180, flexShrink:0 }}>{s.label}</span>
+                    <Sparkline data={s.data.slice(0, 200)} width={400} height={28} color={s.color} showRange />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </Section>
+      )}
+
       {/* Canonical Pipelines */}
       <Section title="Canonical Pipelines" count={CANONICAL_PIPELINES.length} color={T.blue} style={{ marginTop:12 }}>
         <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:10 }}>
@@ -2306,6 +2358,7 @@ function ComposerTab() {
 
 function MatrixTab() {
   const [hover, setHover] = useState(null);
+  const [pinned, setPinned] = useState(null);
   const [familyFilter, setFamilyFilter] = useState("all");
 
   const techs = useMemo(() => {
@@ -2329,9 +2382,10 @@ function MatrixTab() {
   const w = labelW + techs.length * cellSize + 10;
   const h = labelW + techs.length * cellSize + 10;
 
-  const hoverData = hover ? matrix[`${hover.a}|${hover.b}`] : null;
-  const hoverA = hover ? TECHNIQUES.find(t=>t.id===hover.a) : null;
-  const hoverB = hover ? TECHNIQUES.find(t=>t.id===hover.b) : null;
+  const active = pinned || hover;
+  const hoverData = active ? matrix[`${active.a}|${active.b}`] : null;
+  const hoverA = active ? TECHNIQUES.find(t=>t.id===active.a) : null;
+  const hoverB = active ? TECHNIQUES.find(t=>t.id===active.b) : null;
 
   return (
     <div>
@@ -2339,7 +2393,7 @@ function MatrixTab() {
         <Segmented options={[{key:"all",label:"All (35)"},...FAMILIES.map(f=>({key:f.id,label:f.name}))]}
           active={familyFilter} onChange={setFamilyFilter} />
         <span style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3 }}>
-          {techs.length}×{techs.length} = {techs.length*techs.length} cells · Hover for details
+          {techs.length}×{techs.length} = {techs.length*techs.length} cells · Hover or click to pin{pinned && <button onClick={() => setPinned(null)} style={{fontFamily:T.mono,fontSize:T.fs.xs,marginLeft:8,padding:"2px 6px",borderRadius:T.rSm,border:`1px solid ${T.border1}`,background:T.bg3,color:T.text2,cursor:"pointer"}}>Unpin</button>}
         </span>
       </div>
 
@@ -2368,9 +2422,10 @@ function MatrixTab() {
                 <rect key={key} x={labelW + bi*cellSize} y={labelW + ai*cellSize}
                   width={cellSize-1} height={cellSize-1} rx={1}
                   fill={fill} opacity={opacity}
-                  stroke={hover && hover.a===a.id && hover.b===b.id ? T.text0 : "none"} strokeWidth={1.5}
-                  onMouseEnter={() => setHover({a:a.id, b:b.id})}
-                  onMouseLeave={() => setHover(null)}
+                  stroke={(active && active.a===a.id && active.b===b.id) ? T.text0 : "none"} strokeWidth={1.5}
+                  onMouseEnter={() => { if(!pinned) setHover({a:a.id, b:b.id}); }}
+                  onMouseLeave={() => { if(!pinned) setHover(null); }}
+                  onClick={() => setPinned(p => (p && p.a===a.id && p.b===b.id) ? null : {a:a.id, b:b.id})}
                   style={{ cursor:"pointer" }} />
               );
             }))}
@@ -2789,7 +2844,7 @@ function ObservatoryTab() {
           {/* Series Overview */}
           <Section title={feedName} count={chars.n} color={T.orange}>
             <div style={{ marginBottom:12 }}>
-              <Sparkline data={feedData} width={Math.min(800, feedData.length)} height={80} color={T.blue} showRange filled showMean />
+              <Sparkline data={feedData} width={Math.min(800, feedData.length)} height={80} color={T.blue} showRange filled showMean interactive label={`${feedName} time series`} />
             </div>
 
             {/* Detected Characteristics */}
