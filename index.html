@@ -1089,21 +1089,58 @@ function recommendPipelines(chars) {
 
 // ─── Forecasters ─────────────────────────────────────────────
 
+// detect seasonal period: first ACF peak above threshold, prefer smallest lag
+function detectPeriod(data) {
+  const n = data.length;
+  const maxLag = Math.min(Math.floor(n / 2), 90);
+  const mean = data.reduce((s, v) => s + v, 0) / n;
+  let denom = 0;
+  for (let i = 0; i < n; i++) denom += (data[i] - mean) ** 2;
+  if (denom === 0) return 7;
+  const acfs = [];
+  for (let lag = 1; lag <= maxLag; lag++) {
+    let num = 0;
+    for (let i = lag; i < n; i++) num += (data[i] - mean) * (data[i - lag] - mean);
+    acfs.push(num / denom);
+  }
+  // find first local maximum above 0.2
+  for (let i = 1; i < acfs.length - 1; i++) {
+    if (acfs[i] > acfs[i - 1] && acfs[i] > acfs[i + 1] && acfs[i] > 0.2) return i + 1;
+  }
+  // fallback: global max above 0.1
+  let best = 0, bestLag = 7;
+  for (let i = 1; i < acfs.length; i++) {
+    if (acfs[i] > best) { best = acfs[i]; bestLag = i + 1; }
+  }
+  return best > 0.1 ? bestLag : 7;
+}
+
 function forecast(method, data, horizon) {
   const n = data.length;
   if (n < 4) return null;
   const h = horizon || Math.max(5, Math.round(n * 0.1));
 
-  // residual std from last portion for prediction intervals
-  function residualStd(fitted) {
+  // compute residual standard deviation from fitted values
+  function fitSig(fitted) {
     let ss = 0, ct = 0;
-    for (let i = 0; i < fitted.length; i++) {
-      if (fitted[i] !== null) { ss += (data[n - fitted.length + i] - fitted[i]) ** 2; ct++; }
+    for (let i = 0; i < n; i++) {
+      if (fitted[i] !== null && fitted[i] !== undefined) {
+        ss += (data[i] - fitted[i]) ** 2; ct++;
+      }
     }
     return ct > 1 ? Math.sqrt(ss / (ct - 1)) : 1;
   }
 
-  function makeBands(point, sig) {
+  // constant-width prediction interval (most methods)
+  function bands(point, sig) {
+    return {
+      point,
+      lower: point.map(v => v - 1.96 * sig),
+      upper: point.map(v => v + 1.96 * sig),
+    };
+  }
+  // growing-width interval (random walk methods: naive, drift)
+  function rwBands(point, sig) {
     return {
       point,
       lower: point.map((v, i) => v - 1.96 * sig * Math.sqrt(i + 1)),
@@ -1114,39 +1151,24 @@ function forecast(method, data, horizon) {
   if (method === "naive") {
     const last = data[n - 1];
     const pt = Array(h).fill(last);
-    // residual = diff of consecutive values
     let ss = 0;
     for (let i = 1; i < n; i++) ss += (data[i] - data[i - 1]) ** 2;
     const sig = Math.sqrt(ss / (n - 1));
-    return { ...makeBands(pt, sig), name: "Naive", fitted: Array(n).fill(null).map((_, i) => i > 0 ? data[i - 1] : null) };
+    const fitted = Array(n).fill(null).map((_, i) => i > 0 ? data[i - 1] : null);
+    return { ...rwBands(pt, sig), name: "Naive", fitted };
   }
 
   if (method === "seasonal_naive") {
-    // detect period from ACF
-    const maxLag = Math.min(Math.floor(n / 2), 60);
-    const mean = data.reduce((s, v) => s + v, 0) / n;
-    let bestLag = 7, bestAcf = -1;
-    for (let lag = 2; lag <= maxLag; lag++) {
-      let num = 0, d1 = 0, d2 = 0;
-      for (let i = lag; i < n; i++) {
-        num += (data[i] - mean) * (data[i - lag] - mean);
-        d1 += (data[i] - mean) ** 2;
-        d2 += (data[i - lag] - mean) ** 2;
-      }
-      const acf = d1 > 0 && d2 > 0 ? num / Math.sqrt(d1 * d2) : 0;
-      if (acf > bestAcf) { bestAcf = acf; bestLag = lag; }
-    }
-    const m = bestLag;
+    const m = detectPeriod(data);
     const pt = Array.from({ length: h }, (_, i) => data[n - m + (i % m)]);
     const fitted = Array(n).fill(null).map((_, i) => i >= m ? data[i - m] : null);
-    const sig = residualStd(fitted.filter(v => v !== null).length > 0 ? fitted : [data[n-1]]);
-    return { ...makeBands(pt, sig), name: `Seasonal Naive (m=${m})`, fitted };
+    const sig = fitSig(fitted);
+    return { ...bands(pt, sig), name: `Seasonal Naive (m=${m})`, fitted };
   }
 
   if (method === "ewma") {
-    // optimize alpha by minimizing one-step MSE
     let bestAlpha = 0.3, bestMSE = Infinity;
-    for (let a = 0.05; a <= 0.95; a += 0.05) {
+    for (let a = 0.01; a <= 0.99; a += 0.01) {
       let s = data[0], mse = 0;
       for (let i = 1; i < n; i++) {
         mse += (data[i] - s) ** 2;
@@ -1164,7 +1186,7 @@ function forecast(method, data, horizon) {
     }
     const pt = Array(h).fill(level);
     const sig = Math.sqrt(bestMSE);
-    return { ...makeBands(pt, sig), name: `EWMA (α=${alpha.toFixed(2)})`, fitted };
+    return { ...bands(pt, sig), name: `EWMA (α=${alpha.toFixed(2)})`, fitted };
   }
 
   if (method === "ses") {
@@ -1200,46 +1222,50 @@ function forecast(method, data, horizon) {
     }
     const pt = Array.from({ length: h }, (_, i) => l + t * (i + 1));
     const sig = Math.sqrt(bestMSE);
-    return { ...makeBands(pt, sig), name: `Holt (α=${bestA.toFixed(1)}, β=${bestB.toFixed(2)})`, fitted };
+    return { ...bands(pt, sig), name: `Holt (α=${bestA.toFixed(1)}, β=${bestB.toFixed(2)})`, fitted };
   }
 
   if (method === "holt_winters") {
-    // additive Holt-Winters
-    const maxLag = Math.min(Math.floor(n / 2), 60);
-    const mean = data.reduce((s, v) => s + v, 0) / n;
-    let m = 7, bestAcf = -1;
-    for (let lag = 2; lag <= maxLag; lag++) {
-      let num = 0, d1 = 0, d2 = 0;
-      for (let i = lag; i < n; i++) {
-        num += (data[i] - mean) * (data[i - lag] - mean);
-        d1 += (data[i] - mean) ** 2;
-        d2 += (data[i - lag] - mean) ** 2;
-      }
-      const acf = d1 > 0 && d2 > 0 ? num / Math.sqrt(d1 * d2) : 0;
-      if (acf > bestAcf) { bestAcf = acf; m = lag; }
-    }
-    if (n < 2 * m) return forecast("holt", data, horizon); // fallback
+    const m = detectPeriod(data);
+    if (m < 3 || n < 2 * m) return forecast("holt", data, horizon);
 
-    // initialize
-    const alpha = 0.3, beta = 0.1, gamma = 0.3;
+    // grid search alpha, beta, gamma
+    let bestA = 0.3, bestB = 0.1, bestG = 0.3, bestMSE = Infinity;
+    for (let a = 0.1; a <= 0.7; a += 0.15) {
+      for (let b = 0.01; b <= 0.3; b += 0.07) {
+        for (let g = 0.05; g <= 0.6; g += 0.11) {
+          let l = data.slice(0, m).reduce((s, v) => s + v, 0) / m;
+          let tr = (data.slice(m, 2 * m).reduce((s, v) => s + v, 0) - data.slice(0, m).reduce((s, v) => s + v, 0)) / (m * m);
+          const sv = data.slice(0, m).map(v => v - l);
+          let mse = 0, ct = 0;
+          for (let i = m; i < n; i++) {
+            const pred = l + tr + sv[i % m];
+            mse += (data[i] - pred) ** 2; ct++;
+            const nl = a * (data[i] - sv[i % m]) + (1 - a) * (l + tr);
+            tr = b * (nl - l) + (1 - b) * tr;
+            sv[i % m] = g * (data[i] - nl) + (1 - g) * sv[i % m];
+            l = nl;
+          }
+          mse = ct > 0 ? mse / ct : Infinity;
+          if (mse < bestMSE) { bestMSE = mse; bestA = a; bestB = b; bestG = g; }
+        }
+      }
+    }
+    // refit with best params
     let l = data.slice(0, m).reduce((s, v) => s + v, 0) / m;
     let b = (data.slice(m, 2 * m).reduce((s, v) => s + v, 0) - data.slice(0, m).reduce((s, v) => s + v, 0)) / (m * m);
     const s = data.slice(0, m).map(v => v - l);
     const fitted = new Array(m).fill(null);
-    let mse = 0, ct = 0;
     for (let i = m; i < n; i++) {
-      const pred = l + b + s[i % m];
-      fitted.push(pred);
-      mse += (data[i] - pred) ** 2; ct++;
-      const nl = alpha * (data[i] - s[i % m]) + (1 - alpha) * (l + b);
-      const nb = beta * (nl - l) + (1 - beta) * b;
-      s[i % m] = gamma * (data[i] - nl) + (1 - gamma) * s[i % m];
+      fitted.push(l + b + s[i % m]);
+      const nl = bestA * (data[i] - s[i % m]) + (1 - bestA) * (l + b);
+      const nb = bestB * (nl - l) + (1 - bestB) * b;
+      s[i % m] = bestG * (data[i] - nl) + (1 - bestG) * s[i % m];
       l = nl; b = nb;
     }
-    mse = ct > 0 ? mse / ct : 1;
     const pt = Array.from({ length: h }, (_, i) => l + b * (i + 1) + s[(n + i) % m]);
-    const sig = Math.sqrt(mse);
-    return { ...makeBands(pt, sig), name: `Holt-Winters (m=${m})`, fitted };
+    const sig = Math.sqrt(bestMSE);
+    return { ...bands(pt, sig), name: `Holt-Winters (m=${m})`, fitted };
   }
 
   if (method === "drift") {
@@ -1251,12 +1277,12 @@ function forecast(method, data, horizon) {
     const sig = Math.sqrt(ss / (n - 2));
     const fitted = [null];
     for (let i = 1; i < n; i++) fitted.push(data[i - 1] + drift);
-    return { ...makeBands(pt, sig), name: `Drift (δ=${drift.toFixed(4)})`, fitted };
+    return { ...rwBands(pt, sig), name: `Drift (δ=${drift.toFixed(4)})`, fitted };
   }
 
   if (method === "ar") {
     // AR(p) by OLS, p chosen by AIC-like criterion
-    const maxP = Math.min(12, Math.floor(n / 5));
+    const maxP = Math.min(8, Math.floor(n / 10));
     let bestP = 1, bestAIC = Infinity;
     for (let p = 1; p <= maxP; p++) {
       const m = n - p;
@@ -1351,7 +1377,65 @@ function forecast(method, data, horizon) {
       pt.push(pred);
       buf.push(pred);
     }
-    return { ...makeBands(pt, sig), name: `AR(${p})`, fitted };
+    return { ...bands(pt, sig), name: `AR(${p})`, fitted };
+  }
+
+  if (method === "ma") {
+    // Moving average: optimize window size by one-step MSE
+    let bestW = 5, bestMSE = Infinity;
+    for (let w = 3; w <= Math.min(60, Math.floor(n / 3)); w++) {
+      let mse = 0, ct = 0;
+      for (let i = w; i < n; i++) {
+        let sum = 0;
+        for (let j = i - w; j < i; j++) sum += data[j];
+        mse += (data[i] - sum / w) ** 2;
+        ct++;
+      }
+      mse /= ct;
+      if (mse < bestMSE) { bestMSE = mse; bestW = w; }
+    }
+    const w = bestW;
+    const fitted = new Array(w).fill(null);
+    for (let i = w; i < n; i++) {
+      let sum = 0;
+      for (let j = i - w; j < i; j++) sum += data[j];
+      fitted.push(sum / w);
+    }
+    // forecast: last window average, held flat
+    let sum = 0;
+    for (let i = n - w; i < n; i++) sum += data[i];
+    const level = sum / w;
+    const pt = Array(h).fill(level);
+    const sig = Math.sqrt(bestMSE);
+    return { ...bands(pt, sig), name: `MA(${w})`, fitted };
+  }
+
+  if (method === "theta") {
+    // Theta method (Assimakopoulos & Nikolopoulos, 2000)
+    // SES on theta=0 line (deseasonalized), then add back drift
+    const drift = (data[n - 1] - data[0]) / (n - 1);
+    // detrend
+    const detrended = data.map((v, i) => v - drift * i);
+    // SES on detrended
+    let bestAlpha = 0.3, bestMSE = Infinity;
+    for (let a = 0.01; a <= 0.99; a += 0.02) {
+      let s = detrended[0], mse = 0;
+      for (let i = 1; i < n; i++) {
+        mse += (detrended[i] - s) ** 2;
+        s = a * detrended[i] + (1 - a) * s;
+      }
+      mse /= (n - 1);
+      if (mse < bestMSE) { bestMSE = mse; bestAlpha = a; }
+    }
+    let level = detrended[0];
+    const fitted = [null];
+    for (let i = 1; i < n; i++) {
+      fitted.push(level + drift * i);
+      level = bestAlpha * detrended[i] + (1 - bestAlpha) * level;
+    }
+    const pt = Array.from({ length: h }, (_, i) => level + drift * (n + i));
+    const sig = Math.sqrt(bestMSE);
+    return { ...bands(pt, sig), name: `Theta (α=${bestAlpha.toFixed(2)})`, fitted };
   }
 
   // fallback
@@ -1387,8 +1471,10 @@ const FORECAST_METHODS = [
   { id: "naive", label: "Naive" },
   { id: "seasonal_naive", label: "Seasonal Naive" },
   { id: "ewma", label: "EWMA" },
+  { id: "ma", label: "Moving Avg" },
   { id: "holt", label: "Holt Linear" },
   { id: "holt_winters", label: "Holt-Winters" },
+  { id: "theta", label: "Theta" },
   { id: "drift", label: "Drift" },
   { id: "ar", label: "AR(p)" },
 ];
@@ -3095,6 +3181,7 @@ function ObservatoryTab() {
   const loadLiveFeed = useCallback(async (feed) => {
     setLoading(true); setError(null); setFeedData(null); setChars(null);
     setTechRecs([]); setPipeRecs([]); setFeedName(feed.name); setFeedMeta(null);
+    setFcResults(null); setBtResults(null);
     try {
       const result = await FeedManager.fetch(feed);
       setFeedData(result.values);
@@ -3113,6 +3200,7 @@ function ObservatoryTab() {
   const loadSynthetic = useCallback((feed) => {
     setLoading(false); setError(null);
     setFeedName(feed.name);
+    setFcResults(null); setBtResults(null);
     const values = feed.generate();
     setFeedData(values);
     const c = detectCharacteristics(values);
@@ -3120,6 +3208,19 @@ function ObservatoryTab() {
     setTechRecs(recommendTechniques(c));
     setPipeRecs(recommendPipelines(c));
   }, []);
+
+  // Auto-forecast: compare all methods when data loads, show the best
+  useEffect(() => {
+    if (!feedData || feedData.length <= 20) return;
+    const all = FORECAST_METHODS.map(m => backtest(m.id, feedData)).filter(Boolean);
+    if (all.length === 0) return;
+    all.sort((a, b) => a.rmse - b.rmse);
+    const best = all[0];
+    setFcMethod(best.method);
+    const fc = forecast(best.method, feedData, Math.max(10, Math.round(feedData.length * 0.15)));
+    setFcResults(fc);
+    setBtResults(best);
+  }, [feedData]);
 
   const feedCategories = [...new Set(LIVE_FEEDS.map(f => f.category))];
   const filteredFeeds = feedCategory === "all" ? LIVE_FEEDS : LIVE_FEEDS.filter(f => f.category === feedCategory);
@@ -3414,66 +3515,120 @@ function ObservatoryTab() {
               <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:600, marginBottom:8 }}>{fcResults.name}</div>
               {/* Combined chart: history + forecast */}
               <div style={{ background:T.bg2, borderRadius:T.rSm, padding:8, marginBottom:10 }}>
-                <svg width="100%" height={120} viewBox={`0 0 ${feedData.length + fcResults.point.length} 100`} preserveAspectRatio="none" style={{ display:"block" }}>
+                <svg width="100%" height={140} viewBox={`0 0 ${feedData.length + fcResults.point.length} 120`} preserveAspectRatio="none" style={{ display:"block" }}>
                   {(() => {
                     const all = [...feedData, ...fcResults.point];
-                    const lo = [...feedData.map(() => null), ...fcResults.lower];
-                    const hi = [...feedData.map(() => null), ...fcResults.upper];
                     const vMin = Math.min(...all, ...fcResults.lower);
                     const vMax = Math.max(...all, ...fcResults.upper);
                     const vR = vMax - vMin || 1;
-                    const toY = v => 95 - ((v - vMin) / vR) * 90;
+                    const toY = v => 90 - ((v - vMin) / vR) * 82;
                     const toX = i => i;
                     const n = feedData.length;
                     const histPts = feedData.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
                     const fcPts = fcResults.point.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ");
-                    // confidence band
                     const bandPts = fcResults.point.map((_, i) => `${toX(n + i)},${toY(fcResults.upper[i])}`).join(" ")
                       + " " + [...fcResults.point].reverse().map((_, i) => {
                         const ri = fcResults.point.length - 1 - i;
                         return `${toX(n + ri)},${toY(fcResults.lower[ri])}`;
                       }).join(" ");
+                    // fitted values overlay
+                    const fittedPts = fcResults.fitted ? fcResults.fitted
+                      .map((v, i) => v != null ? `${toX(i)},${toY(v)}` : null)
+                      .filter(Boolean).join(" ") : "";
+                    // residuals for mini bar chart at bottom
+                    const residuals = fcResults.fitted ? feedData.map((v, i) =>
+                      fcResults.fitted[i] != null ? v - fcResults.fitted[i] : null
+                    ) : [];
+                    const maxRes = Math.max(1e-6, ...residuals.map(r => r != null ? Math.abs(r) : 0));
                     return (
                       <React.Fragment>
                         <polygon points={bandPts} fill={T.accent} fillOpacity={0.15} />
-                        <line x1={n} y1={0} x2={n} y2={100} stroke={T.text3} strokeWidth={0.3} strokeDasharray="2,2" />
+                        <line x1={n} y1={0} x2={n} y2={120} stroke={T.text3} strokeWidth={0.3} strokeDasharray="2,2" />
                         <polyline points={histPts} fill="none" stroke={T.text2} strokeWidth={0.5} />
+                        {fittedPts && <polyline points={fittedPts} fill="none" stroke={T.green} strokeWidth={0.5} strokeOpacity={0.7} />}
                         <polyline points={`${toX(n-1)},${toY(feedData[n-1])} ${fcPts}`} fill="none" stroke={T.accent} strokeWidth={0.8} />
                         <polyline points={fcResults.upper.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ")} fill="none" stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
                         <polyline points={fcResults.lower.map((v, i) => `${toX(n + i)},${toY(v)}`).join(" ")} fill="none" stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
+                        {/* residual bars at bottom */}
+                        {residuals.map((r, i) => r != null ? (
+                          <line key={i} x1={toX(i)} y1={105} x2={toX(i)} y2={105 - (r / maxRes) * 12}
+                            stroke={r >= 0 ? T.green : T.crimson} strokeWidth={0.4} strokeOpacity={0.5} />
+                        ) : null)}
+                        <line x1={0} y1={105} x2={n} y2={105} stroke={T.text3} strokeWidth={0.2} />
+                        <text x={2} y={100} style={{ fontFamily:T.mono, fontSize:2.5, fill:T.text3 }}>residuals</text>
                         <text x={n + 2} y={8} style={{ fontFamily:T.mono, fontSize:3, fill:T.accent }}>forecast →</text>
+                        <text x={2} y={8} style={{ fontFamily:T.mono, fontSize:2.5, fill:T.green }}>fitted ─</text>
                       </React.Fragment>
                     );
                   })()}
                 </svg>
               </div>
               {btResults && !Array.isArray(btResults) && (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:8 }}>
-                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAE</div>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mae.toFixed(3)}</div>
-                  </div>
-                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>RMSE</div>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.rmse.toFixed(3)}</div>
-                  </div>
-                  {btResults.mape !== null && (
+                <div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:8, marginBottom:10 }}>
                     <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
-                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAPE</div>
-                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mape.toFixed(1)}%</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAE</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mae.toFixed(3)}</div>
                     </div>
-                  )}
-                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>95% Coverage</div>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:700,
-                      color: btResults.coverage > 0.9 ? T.green : btResults.coverage > 0.8 ? T.yellow : T.crimson }}>
-                      {(btResults.coverage * 100).toFixed(0)}%
+                    <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>RMSE</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.rmse.toFixed(3)}</div>
+                    </div>
+                    {btResults.mape !== null && (
+                      <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>MAPE</div>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.mape.toFixed(1)}%</div>
+                      </div>
+                    )}
+                    <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>95% Coverage</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, fontWeight:700,
+                        color: btResults.coverage > 0.9 ? T.green : btResults.coverage > 0.8 ? T.yellow : T.crimson }}>
+                        {(btResults.coverage * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                    <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>Holdout</div>
+                      <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.holdout} pts</div>
                     </div>
                   </div>
-                  <div style={{ background:T.bg3, padding:"8px 10px", borderRadius:T.rSm }}>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, textTransform:"uppercase" }}>Holdout</div>
-                    <div style={{ fontFamily:T.mono, fontSize:T.fs.sm, color:T.text0, fontWeight:700 }}>{btResults.holdout} pts</div>
-                  </div>
+                  {/* Residual ACF diagnostic */}
+                  {fcResults && fcResults.fitted && (() => {
+                    const res = feedData.map((v, i) => fcResults.fitted[i] != null ? v - fcResults.fitted[i] : null).filter(v => v != null);
+                    if (res.length < 10) return null;
+                    const rn = res.length;
+                    const mu = res.reduce((s, v) => s + v, 0) / rn;
+                    let d = 0;
+                    for (let i = 0; i < rn; i++) d += ((res[i] - mu) ** 2);
+                    if (d === 0) return null;
+                    const maxL = Math.min(20, Math.floor(rn / 3));
+                    const acfs = [];
+                    for (let lag = 1; lag <= maxL; lag++) {
+                      let num = 0;
+                      for (let i = lag; i < rn; i++) num += (res[i] - mu) * (res[i - lag] - mu);
+                      acfs.push(num / d);
+                    }
+                    const ci = 1.96 / Math.sqrt(rn);
+                    const anySignif = acfs.some(a => Math.abs(a) > ci);
+                    return (
+                      <div style={{ background:T.bg2, borderRadius:T.rSm, padding:8 }}>
+                        <div style={{ fontFamily:T.mono, fontSize:T.fs.xs, color:T.text3, marginBottom:4 }}>
+                          RESIDUAL ACF {anySignif ?
+                            <span style={{ color:T.yellow, marginLeft:6 }}>structure remaining</span> :
+                            <span style={{ color:T.green, marginLeft:6 }}>white noise</span>}
+                        </div>
+                        <svg width="100%" height={50} viewBox={`0 0 ${maxL * 6 + 4} 50`} style={{ display:"block" }}>
+                          <line x1={0} y1={25} x2={maxL * 6 + 4} y2={25} stroke={T.text3} strokeWidth={0.3} />
+                          <line x1={0} y1={25 - ci * 24} x2={maxL * 6 + 4} y2={25 - ci * 24} stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
+                          <line x1={0} y1={25 + ci * 24} x2={maxL * 6 + 4} y2={25 + ci * 24} stroke={T.accent} strokeWidth={0.3} strokeDasharray="2,1" />
+                          {acfs.map((a, i) => (
+                            <line key={i} x1={i * 6 + 4} y1={25} x2={i * 6 + 4} y2={25 - a * 24}
+                              stroke={Math.abs(a) > ci ? T.yellow : T.text2} strokeWidth={3} />
+                          ))}
+                        </svg>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
